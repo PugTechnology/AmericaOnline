@@ -1,0 +1,177 @@
+body {
+    margin: 0;
+    overflow: hidden; /* Prevent scrollbars from appearing */
+    background-color: #008080; /* Windows 98 teal background */
+    font-family: Tahoma, Geneva, sans-serif; /* Common Win98 font, with fallbacks */
+    color: #000;
+}
+
+#desktop {
+    width: 100vw;
+    height: calc(100vh - 30px); /* Full height minus taskbar */
+    position: relative;
+    overflow: hidden; /* Desktop icons shouldn't cause scroll */
+}
+
+.desktop-icon {
+    width: 75px;
+    height: 75px;
+    margin: 20px;
+    text-align: center;
+    float: left; /* Simple layout for now */
+    cursor: pointer;
+}
+
+.desktop-icon img {
+    width: 48px; /* Standard icon size */
+    height: 48px;
+    display: block;
+    margin: 0 auto 5px;
+}
+
+.desktop-icon span {
+    display: block;
+    font-size: 12px;
+    color: white; /* Desktop icon text is typically white or has a highlight */
+    background-color: transparent; /* Will be improved later for selected state */
+    padding: 2px;
+}
+
+/* Basic Window Styling */
+.window {
+    position: absolute;
+    width: 400px;
+    height: 300px;
+    background-color: #c0c0c0; /* Classic Windows gray */
+    border: 2px outset #fff;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    display: none; /* Hidden by default */
+    top: 50px; /* Default position */
+    left: 50px;
+}
+
+.title-bar {
+    background-color: #000080; /* Dark blue for title bar */
+    color: white;
+    padding: 3px 5px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 20px;
+    cursor: default; /* Usually draggable, but not implemented yet */
+}
+
+.title-bar .title {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.title-bar-controls button {
+    background-color: #c0c0c0; /* Match window background */
+    border: 1px outset #fff;
+    width: 16px;
+    height: 14px;
+    margin-left: 2px;
+    font-family: "Marlett", "Symbol", sans-serif; /* Font for webdings-like symbols, or use text */
+    font-size: 10px;
+    line-height: 10px; /* Center symbols */
+    padding: 0;
+    cursor: default;
+}
+
+.title-bar-controls button:active {
+    border-style: inset;
+}
+
+/* Specific button symbols can be text or actual symbols if Marlett is available */
+.minimize-btn::before { content: "0"; } /* Marlett '0' is minimize */
+.maximize-btn::before { content: "1"; } /* Marlett '1' is maximize */
+.close-btn::before { content: "r"; }    /* Marlett 'r' is close */
+
+
+#taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 30px;
+    background-color: #c0c0c0; /* Same gray as windows */
+    border-top: 2px outset #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    z-index: 1000; /* Ensure taskbar is on top */
+}
+
+#start-button {
+    background-color: #c0c0c0;
+    border: 2px outset #fff;
+    padding: 3px 10px;
+    font-weight: bold;
+    cursor: default;
+    /* Ideally, add Windows logo icon here */
+}
+
+#start-button:active {
+    border-style: inset;
+}
+
+/* Basic styling for selected icon text (can be improved) */
+.desktop-icon.selected span {
+    background-color: #000080; /* Blue highlight */
+    color: white;
+}
+
+/* AOL Window Specific Styles */
+#aol-window .window-body {
+    background-color: #f0f0f0; /* Light gray, typical for apps */
+    font-family: "Arial", sans-serif; /* Common font for older apps */
+    text-align: center;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#aol-window h2 {
+    color: #003399; /* AOL blue */
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+#aol-window form label {
+    font-size: 12px;
+    color: #333;
+    text-align: left;
+}
+
+#aol-window form input[type="text"],
+#aol-window form input[type="password"] {
+    border: 1px solid #999;
+    padding: 5px;
+    margin-bottom: 10px;
+    width: calc(100% - 12px); /* Account for padding */
+    box-sizing: border-box;
+}
+
+#aol-window .aol-signon-btn {
+    background-color: #00529b; /* AOL's button blue */
+    color: white;
+    border: 2px outset #adcff7;
+    padding: 8px 15px;
+    font-weight: bold;
+    cursor: default; /* Since it's disabled */
+}
+
+#aol-window .aol-signon-btn:disabled {
+    opacity: 0.7;
+}
+
+#aol-window img[alt="AOL Logo"] {
+    width: 150px; /* Adjust as needed */
+    margin-bottom: 15px;
+}
