@@ -18,7 +18,7 @@ body {
     height: 75px;
     margin: 20px;
     text-align: center;
-    float: left; /* Simple layout for now */
+    position: absolute; /* For draggable icons */
     cursor: pointer;
 }
 
@@ -253,4 +253,11 @@ body {
 
 .taskbar-item:active { /* When clicked (though no action yet) */
     border-style: inset;
+}
+
+.taskbar-item.minimized { /* More specific selector */
+    border-style: inset;
+    background-color: #e0e0e0; /* Slightly different shade than active */
+    color: #444;
+    /* Add any other distinct styling for minimized items */
 }
