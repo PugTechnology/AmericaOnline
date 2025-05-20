@@ -13,9 +13,41 @@ document.addEventListener('DOMContentLoaded', () => {
             // Potentially bring to front if multiple windows are managed
 
             if (windowId === 'aol-window') {
+                // Add to taskbar if not already there
+                if (!document.getElementById('taskbar-aol')) {
+                    const activeProgramsContainer = document.getElementById('active-programs');
+                    const aolTaskbarItem = document.createElement('button'); // Using button for semantics
+                    aolTaskbarItem.id = 'taskbar-aol';
+                    aolTaskbarItem.className = 'taskbar-item';
+                    aolTaskbarItem.textContent = 'America Online';
+                    // Optional: Add click listener for future focus/minimize
+                    aolTaskbarItem.addEventListener('click', () => {
+                        const aolWin = document.getElementById('aol-window');
+                        if (aolWin) {
+                            // Make sure it's visible
+                            aolWin.style.display = 'block'; 
+
+                            // Bring to front (adjust z-index)
+                            // Find the highest current z-index among windows
+                            let maxZ = 0;
+                            document.querySelectorAll('.window').forEach(w => {
+                                const z = parseInt(w.style.zIndex || '0', 10);
+                                if (z > maxZ) {
+                                    maxZ = z;
+                                }
+                            });
+                            // Set the AOL window to be on top of all others
+                            aolWin.style.zIndex = (maxZ + 1).toString();
+                            
+                            console.log('AOL taskbar item clicked. Window focused.');
+                        }
+                    });
+                    activeProgramsContainer.appendChild(aolTaskbarItem);
+                }
+                // Play sound (this part should already be there)
                 const dialUpSound = document.getElementById('dial-up-sound');
                 if (dialUpSound) {
-                    dialUpSound.currentTime = 0; // Rewind to start
+                    dialUpSound.currentTime = 0;
                     dialUpSound.play().catch(e => console.error("Error playing sound:", e));
                 }
             }
@@ -28,10 +60,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (windowElement) {
             windowElement.style.display = 'none';
             if (windowElement.id === 'aol-window') {
+                // Remove from taskbar
+                const aolTaskbarItem = document.getElementById('taskbar-aol');
+                if (aolTaskbarItem) {
+                    aolTaskbarItem.remove();
+                }
+                // Stop sound (this part should already be there)
                 const dialUpSound = document.getElementById('dial-up-sound');
                 if (dialUpSound && !dialUpSound.paused) {
                     dialUpSound.pause();
-                    dialUpSound.currentTime = 0; // Reset for next time
+                    dialUpSound.currentTime = 0;
                 }
             }
         }
@@ -137,4 +175,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial deselection
     deselectAllIcons();
+
+    // --- System Time in Taskbar ---
+    const systemTimeElement = document.getElementById('system-time');
+
+    function updateSystemTime() {
+        if (!systemTimeElement) return; // Guard clause
+
+        const now = new Date();
+        let hours = now.getHours();
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        // const seconds = now.getSeconds().toString().padStart(2, '0'); // Optional: add seconds
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+
+        hours = hours % 12;
+        hours = hours ? hours : 12; // Hour '0' should be '12'
+        const hoursStr = hours.toString().padStart(2, '0');
+        
+        // systemTimeElement.textContent = `${hoursStr}:${minutes}:${seconds} ${ampm}`; // With seconds
+        systemTimeElement.textContent = `${hoursStr}:${minutes} ${ampm}`; // Without seconds
+    }
+
+    // Initial call to display time immediately
+    updateSystemTime();
+    // Update time every second
+    setInterval(updateSystemTime, 1000);
+
+    // --- Start Menu Functionality ---
+    const startButton = document.getElementById('start-button');
+    const startMenu = document.getElementById('start-menu');
+
+    if (startButton && startMenu) {
+        startButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent click from closing menu immediately
+            const isVisible = startMenu.style.display === 'block';
+            startMenu.style.display = isVisible ? 'none' : 'block';
+        });
+
+        // Close Start Menu if clicking outside
+        document.addEventListener('click', (event) => {
+            if (startMenu.style.display === 'block') {
+                // Check if the click was outside the start menu and not on the start button
+                if (!startMenu.contains(event.target) && event.target !== startButton) {
+                    startMenu.style.display = 'none';
+                }
+            }
+        });
+    }
 });
