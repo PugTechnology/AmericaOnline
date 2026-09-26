@@ -98,6 +98,7 @@
           'NOTEPAD.EXE': bin(53248, { app: 'notepad' }),
           'EXPLORER.EXE': bin(241664, { app: 'explorer' }),
           'WINMINE.EXE': bin(24064, { app: 'minesweeper' }),
+          'PINBALL.EXE': bin(281088, { app: 'pinball' }),
           'COMMAND.COM': bin(93890, { app: 'msdos' }),
           'WIN.INI': file('; for 16-bit app support\r\n[windows]\r\nload=\r\nrun=\r\nNullPort=None\r\n\r\n[Desktop]\r\nWallpaper=(None)\r\nTileWallpaper=0\r\n\r\n[fonts]\r\n[extensions]\r\ntxt=notepad.exe ^.txt\r\nini=notepad.exe ^.ini\r\n\r\n[mci extensions]\r\n[Sounds]\r\nSystemStart=The Microsoft Sound.wav\r\n', { sys: true }),
           'SYSTEM.INI': file('[boot]\r\nshell=Explorer.exe\r\nsystem.drv=system.drv\r\ndrivers=mmsystem.dll power.drv\r\nuser.exe=user.exe\r\ngdi.exe=gdi.exe\r\nsound.drv=mmsound.drv\r\n\r\n[386Enh]\r\nebios=*ebios\r\nwoafont=dosapp.fon\r\n\r\n[drivers]\r\nwave=mmdrv.dll\r\ntimer=timer.drv\r\n', { sys: true }),

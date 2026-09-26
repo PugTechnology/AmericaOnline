@@ -9,6 +9,7 @@
     doom: 'doom', 'doom.exe': 'doom',
     aol: 'aol', 'aol.exe': 'aol', waol: 'aol',
     winmine: 'minesweeper', 'winmine.exe': 'minesweeper', minesweeper: 'minesweeper',
+    pinball: 'pinball', 'pinball.exe': 'pinball',
     explorer: 'explorer', 'explorer.exe': 'explorer',
     iexplore: 'ie', 'iexplore.exe': 'ie',
     control: 'control', 'control.exe': 'control',

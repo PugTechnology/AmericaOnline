@@ -570,6 +570,25 @@
     32: function (g) { g.raised(1, 1, 30, 30, L); g.map(3, 3, MINE13, null, 2); },
     16: function (g) { g.raised(0, 0, 16, 16, L); g.map(1, 1, MINE13); g.px(7, 1, L); g.px(7, 13, L); g.px(1, 7, L); g.px(13, 7, L); }
   };
+  // 3D Pinball: a steel ball above a red flipper on a starry blue table.
+  I.pinball = {
+    32: function (g) {
+      g.box(3, 1, 26, 30, N, K);
+      g.rect(4, 2, 24, 3, B);
+      [[8, 7], [22, 9], [14, 5], [25, 17], [6, 19]].forEach(function (p) { g.px(p[0], p[1], W); });
+      g.disc(20, 12, 3, Y, K); g.disc(10, 14, 3, R, K);
+      g.poly([[6, 25], [17, 22], [17, 25], [7, 28]], R, K);
+      g.hl(8, 15, 24, W);
+      g.disc(19, 19, 4, L, K); g.px(18, 17, W); g.px(17, 18, W); g.px(18, 18, W); g.px(21, 21, D); g.px(20, 22, D);
+    },
+    16: function (g) {
+      g.box(1, 0, 14, 16, N, K);
+      g.px(4, 3, W); g.px(11, 2, W); g.px(12, 8, W);
+      g.disc(5, 6, 1.5, R, null);
+      g.poly([[3, 13], [9, 11], [9, 13], [4, 15]], R, K);
+      g.disc(10, 8, 2.5, L, K); g.px(9, 7, W);
+    }
+  };
   I.mine = {
     32: function (g) { g.map(3, 3, MINE13, null, 2); },
     16: function (g) { g.map(1, 1, MINE13); }

@@ -8,7 +8,8 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 
 **The boot**
 - A power button, with Power and Disk LEDs.
-- A Compaq POST: the blinking F10 cursor, the COMPAQ logo, a memory count, IDE detection and the floppy seek.
+- An Award Modular BIOS POST: the Energy Star logo, a memory count, IDE detection and the floppy seek.
+- It stops at *Press F1 to continue, DEL to enter SETUP*. **F1** continues through the System Configurations screen; **DEL** skips the Windows 98 start-up animation.
 - "Starting Windows 98...", then the cloud splash with its scrolling bar.
 - The "Welcome to Windows" logon, and the startup chime.
 - Shut Down runs "Windows is shutting down" and ends on "It's now safe to turn off your computer." Restart, Stand by and "Restart in MS-DOS mode" work too.
@@ -27,6 +28,9 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 - **My Computer and Explorer:** folders on C:, the Web View pane with the disk-usage pie, Recycle Bin, Control Panel, Printers and Network Neighborhood. Drive A: gives "The device is not ready", floppy grind included.
 - **MS-DOS Prompt:** `DIR`, `CD`, `TYPE`, `COPY`, `REN`, `DEL`, `MD`, `MEM`, `VER`, and the classic *Abort, Retry, Fail?*
 - **Minesweeper:** Beginner, Intermediate and Expert, with flags, ? marks, chording and best times.
+- **3D Pinball:** an original space-cadet-style table with flippers, plunger, bumpers, ramp, hyperspace, missions, ranks and high scores. Z and / flip, Space launches.
+- **Screen savers:** 3D Pipes (WebGL), Starfield and Mystify. They start after idle time; Display Properties has the settings and a live preview.
+- **Welcome to Windows 98:** plays background music from a YouTube embed, with a Music toggle.
 - **DOOM:** the shareware Episode 1, running in a window. Saved games persist.
 - **Internet Explorer 4:** browses the web as it was in 1996–2001.
 - **Control Panel:** Display (desktop colour and pattern), Sounds (mute), System Properties, Date/Time, and *Compaq QuickRestore* to wipe C: back to factory.
@@ -87,5 +91,7 @@ To add a program, call `Shell.register('id', { name, icon, launch(arg) })` and o
 - **VT323 font:** by Peter Hull (SIL Open Font License 1.1).
 - **Archived web pages:** served live by the [Internet Archive's Wayback Machine](https://web.archive.org/). Please consider supporting them.
 - **Icons, sounds and the startup chime:** original creations for this project, drawn and synthesized in code. No Microsoft, Compaq or AOL assets are included.
+- **3D Pinball and 3D Pipes:** original re-creations written for this project; no Microsoft game data or code is used.
+- **Welcome music:** streamed from YouTube through its embedded player; it isn't stored in this repository.
 
 This is a fan-made nostalgia project. It isn't affiliated with or endorsed by Microsoft, HP/Compaq, AOL or id Software. Windows, America Online and DOOM are trademarks of their respective owners.

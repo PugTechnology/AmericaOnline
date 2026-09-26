@@ -448,7 +448,8 @@
     return [
       { label: 'Accessories', icon: 'programs', items: [
         { label: 'Games', icon: 'programs', items: [
-          { label: 'Minesweeper', icon: 'minesweeper', action: function () { Shell.launch('minesweeper'); } }
+          { label: 'Minesweeper', icon: 'minesweeper', action: function () { Shell.launch('minesweeper'); } },
+          { label: '3D Pinball', icon: 'pinball', action: function () { Shell.launch('pinball'); } }
         ] },
         { label: 'System Tools', icon: 'programs', items: [
           { label: 'Compaq QuickRestore', icon: 'drive-hdd', action: function () { Shell.launch('control', 'quickrestore'); } }

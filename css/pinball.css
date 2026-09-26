@@ -1,0 +1,30 @@
+/* 3D Pinball for Windows - Space Cadet (tribute) */
+.pinball .window-body { flex: none; background: #000; align-items: center; }
+.pinball-root { position: relative; width: 600px; height: 460px; background: #000; overflow: hidden; }
+.pinball-canvas {
+  display: block;
+  width: 600px;
+  height: 460px;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+/* Dialogs (high score entry / table) */
+.pinball-dialog { padding: 12px 12px 0; }
+.pinball-dialog p { margin: 0 0 6px; }
+.pinball-dialog .field { width: 100%; margin-top: 4px; }
+.pinball-dialog-row { display: flex; gap: 12px; align-items: flex-start; }
+.pinball-dialog-row img { flex: none; }
+.pinball-big { font-weight: bold; font-size: 13px; }
+.pinball-dialog .sunken-panel { padding: 0; }
+.pinball-scores { width: 100%; border-collapse: collapse; background: #fff; }
+.pinball-scores th {
+  text-align: left; font-weight: normal; padding: 2px 6px; background: var(--face);
+  box-shadow: inset -1px -1px var(--dark), inset 1px 1px var(--hilight), inset -2px -2px var(--shadow);
+}
+.pinball-scores td { padding: 2px 6px; height: 18px; }
+.pinball-scores .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pinball-scores tr.mine td { background: var(--select); color: #fff; }
