@@ -181,8 +181,30 @@
   }
 
   // ------------------------------------------------------------------ frame
+  // AOL's loading splash, then the client itself.
+  var splashing = false;
   function launch(arg) {
     if (app && !app.win.closed) { WM.focus(app.win); if (arg && app.online) go(arg); return app.win; }
+    if (splashing) return null;
+    splashing = true;
+    var splash = h('div', { className: 'aol-splash' }, [
+      U.img('aol-logo', 64),
+      h('div', { className: 'as-text' }, [h('div', { className: 'as-name' }, 'America Online'), h('div', { className: 'as-ver' }, 'Version 4.0 for Windows 95/98')]),
+      h('div', { className: 'as-load' }, 'Loading...')
+    ]);
+    document.getElementById('desktop').appendChild(splash);
+    document.body.classList.add('busy');
+    U.sound('hddSeek', 1400);
+    setTimeout(function () {
+      splash.remove();
+      document.body.classList.remove('busy');
+      splashing = false;
+      openClient(arg);
+    }, 1600);
+    return null;
+  }
+
+  function openClient(arg) {
 
     app = { state: loadState(), online: false, sn: null, timers: [], connecting: null };
 

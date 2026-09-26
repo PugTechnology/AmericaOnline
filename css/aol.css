@@ -240,3 +240,16 @@
 .perk { display: flex; gap: 10px; align-items: flex-start; padding: 6px; background: #fff; box-shadow: var(--thin-sunken); }
 .perk p { margin: 2px 0 0; }
 .msgbox-wrap { padding-bottom: 2px; }
+
+/* Loading splash */
+.aol-splash {
+  position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 9000;
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center;
+  padding: 18px 26px; min-width: 320px; color: #fff;
+  background: linear-gradient(135deg, #0b2e6f, #1f5dc4 60%, #3d8ae6);
+  box-shadow: var(--raised-window), 4px 4px 0 rgba(0,0,0,.35); border: 2px solid #ffcc00;
+}
+.aol-splash img { width: 64px; height: 64px; }
+.as-name { font: italic bold 26px Georgia, "Times New Roman", serif; -webkit-font-smoothing: antialiased; text-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+.as-ver { font-size: 11px; color: #cfe0ff; margin-top: 4px; }
+.as-load { grid-column: 1 / -1; font-size: 11px; color: #ffe066; text-align: right; }
