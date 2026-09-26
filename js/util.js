@@ -40,15 +40,16 @@
     return U.h('img', Object.assign({ src: U.icon(name, size), width: size || 32, height: size || 32, alt: '', draggable: 'false' }, attrs || {}));
   };
 
-  // "&File" -> File with the F underlined (Windows accelerator notation)
+  // "&File" -> File with the F underlined (Windows accelerator notation).
+  // One wrapper span, so flex containers treat the label as a single item.
   U.label = function (text) {
-    var frag = document.createDocumentFragment();
+    var el = document.createElement('span');
     var i = text.indexOf('&');
-    if (i === -1) { frag.appendChild(document.createTextNode(text)); return frag; }
-    frag.appendChild(document.createTextNode(text.slice(0, i)));
-    frag.appendChild(U.h('span', { className: 'u' }, text.charAt(i + 1)));
-    frag.appendChild(document.createTextNode(text.slice(i + 2)));
-    return frag;
+    if (i === -1) { el.textContent = text; return el; }
+    el.appendChild(document.createTextNode(text.slice(0, i)));
+    el.appendChild(U.h('span', { className: 'u' }, text.charAt(i + 1)));
+    el.appendChild(document.createTextNode(text.slice(i + 2)));
+    return el;
   };
   U.plain = function (text) { return String(text).replace('&', ''); };
   U.accel = function (text) { var i = text.indexOf('&'); return i === -1 ? '' : text.charAt(i + 1).toLowerCase(); };

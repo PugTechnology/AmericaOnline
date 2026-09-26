@@ -113,10 +113,10 @@
   font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-.w98-splash .flag { width: calc(min(16vw, 22vh)); height: auto; filter: drop-shadow(0.3vw 0.4vw 0.3vw rgba(0,0,40,.35)); }
+.w98-splash .flag { width: calc(min(23vw, 32vh)); height: auto; margin-right: -1.5vw; filter: drop-shadow(0.3vw 0.4vw 0.3vw rgba(0,0,40,.35)); }
 .w98-splash .words { display: flex; flex-direction: column; color: #000; line-height: 0.9; }
 .w98-splash .ms { font: bold calc(min(2.4vw, 3.4vh)) Arial, Helvetica, sans-serif; letter-spacing: 0.02em; padding-left: 0.2em; }
-.w98-splash .ms sup, .w98-splash .win sup { font-size: 0.35em; vertical-align: top; position: relative; top: 0.3em; font-weight: normal; }
+.w98-splash .ms sup, .w98-splash .win sup { font-size: 0.28em; vertical-align: top; position: relative; top: 0.3em; font-weight: normal; }
 .w98-splash .win { font: bold calc(min(10vw, 14vh)) "Franklin Gothic Medium", "Arial", sans-serif; letter-spacing: -0.03em; display: flex; align-items: flex-start; }
 .w98-splash .win .num { font-size: 0.62em; margin-left: 0.04em; color: #000; font-style: normal; }
 .w98-splash .footer { position: absolute; left: 0; right: 0; bottom: 5vh; text-align: center; font: bold 2.2vh Arial, sans-serif; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,.5); }

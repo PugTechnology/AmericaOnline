@@ -64,7 +64,7 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='1' height='1'/%3E%3Crect x='1' y='1' width='1' height='1'/%3E%3C/svg%3E");
   opacity: 0.5;
 }
-#taskbar.veiled::after { content: ""; position: absolute; inset: 0; background-image: inherit; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='1' height='1'/%3E%3Crect x='1' y='1' width='1' height='1'/%3E%3C/svg%3E"); opacity: .5; }
+.window.above-veil { z-index: 20001 !important; }
 .shutdown-dialog { display: grid; grid-template-columns: 40px 1fr; padding: 12px 12px 0; gap: 4px 10px; }
 .shutdown-dialog > img { margin-top: 6px; }
 .shutdown-dialog p { margin: 8px 0 8px; }

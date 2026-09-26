@@ -1,72 +1,91 @@
-# WebOS Simulation Project
+# America Online (on a Compaq Presario running Windows 98)
 
-## Purpose
+Power on a late-90s Compaq Presario in your browser. Hear the hard drive spin up and the floppy drive grind, watch the BIOS count memory, sit through the Windows 98 splash, log on, and land on the teal desktop. Then double-click **America Online**, listen to the modem sing, and hear *"Welcome! You've got mail!"*
 
-This project aims to simulate a retro desktop operating system environment, reminiscent of systems like Windows 98, entirely within a web browser. It's an exploration of what's possible with HTML, CSS, and JavaScript to recreate classic UI elements, interactions, and simple applications.
+Everything runs client-side in plain HTML, CSS and JavaScript. There's no build step and no server code.
 
-## Current Features
+## What's in the box
 
-As of now, the WebOS simulation includes:
+**The boot**
+- A power button, with Power and Disk LEDs.
+- A Compaq POST: the blinking F10 cursor, the COMPAQ logo, a memory count, IDE detection and the floppy seek.
+- "Starting Windows 98...", then the cloud splash with its scrolling bar.
+- The "Welcome to Windows" logon, and the startup chime.
+- Shut Down runs "Windows is shutting down" and ends on "It's now safe to turn off your computer." Restart, Stand by and "Restart in MS-DOS mode" work too.
+- Press **Esc** during start-up to hurry it along. Tick *Quick boot* on the power screen to skip the BIOS.
 
-*   **Desktop Environment:**
-    *   Windows 98-style desktop background and layout.
-    *   Taskbar with a functional Start button and system clock (displaying the user's current time).
-    *   Desktop icons for "America Online," "My Computer," and "Recycle Bin." (Icon dragging to be implemented soon).
-*   **Windowing System:**
-    *   Basic window management allowing windows to be opened, closed, and dragged.
-    *   Active windows are brought to the front (basic z-index management).
-*   **Start Menu:**
-    *   A functional Start Menu that lists mock application entries.
-*   **Applications & Interactions:**
-    *   **America Online (AOL) Simulation:**
-        *   Double-clicking the AOL desktop icon opens a simulated AOL application window.
-        *   Plays a dial-up modem sound upon launching.
-        *   The AOL application appears as an active item in the taskbar. Clicking this item focuses the AOL window.
-    *   Other desktop icons are currently placeholders for future functionality.
+**Sound**
+- Every sound is synthesized live with the Web Audio API: the power switch, fan hum, hard drive spin-up and seeks, floppy stepper, POST beep and Windows chimes.
+- The 17-second dial-up handshake and busy signal are synthesized the same way, as are the Buddy List door sounds and the IM chimes.
+- AOL's voice lines ("Welcome!", "You've got mail!", "Goodbye!") use your browser's speech engine.
 
-## Tech Stack & Requirements
+**Windows 98**
+- A real window manager: drag, resize, minimize, maximize, the taskbar and the Start menu with its cascading submenus.
+- Right-click menus, keyboard shortcuts (Alt+F4, Ctrl+Esc, Alt+letter), and desktop icons you can drag, rename and delete.
+- **Drive C:** lives in `localStorage`. Anything you save survives a reload, and the Recycle Bin actually works.
+- **Notepad:** New, Open, Save and Save As through the classic common dialogs, plus Find, Time/Date and Word Wrap. It asks before throwing away unsaved changes.
+- **My Computer and Explorer:** folders on C:, the Web View pane with the disk-usage pie, Recycle Bin, Control Panel, Printers and Network Neighborhood. Drive A: gives "The device is not ready", floppy grind included.
+- **MS-DOS Prompt:** `DIR`, `CD`, `TYPE`, `COPY`, `REN`, `DEL`, `MD`, `MEM`, `VER`, and the classic *Abort, Retry, Fail?*
+- **Minesweeper:** Beginner, Intermediate and Expert, with flags, ? marks, chording and best times.
+- **DOOM:** the shareware Episode 1, running in a window. Saved games persist.
+- **Internet Explorer 4:** browses the web as it was in 1996–2001.
+- **Control Panel:** Display (desktop colour and pattern), Sounds (mute), System Properties, Date/Time, and *Compaq QuickRestore* to wipe C: back to factory.
 
-*   **Core Technologies:** HTML, CSS, JavaScript (ES6+)
-*   **Requirements:** A modern web browser that supports these technologies.
-*   **Assets:** The simulation uses local image files (`img/*.png`) and audio files (`audio/*.mp3`). These must be placed in the respective `img/` and `audio/` directories in the project root.
+**America Online 4.0**
+- **Sign On:** screen names, New User and Guest.
+- **Dial-up:** the six-step connection (modem, running man, people) synced to the modem sound, with the occasional busy signal.
+- **Welcome screen:** "You Have Mail", "Today on AOL" headlines and the Channels list.
+- **Keywords:** type NEWS, SPORTS, WEATHER, KIDS ONLY, CHAT, QUOTES or HOROSCOPES into the box, or brand keywords like YAHOO, CNN, SPACE JAM, NINTENDO and NAPSTER. Press Ctrl+K for the Keyword window.
+- **Web addresses:** type any web address (e.g. `www.geocities.com`) to open the archived page from the Internet Archive's Wayback Machine. *Internet > Time Travel* picks the year.
+- **Mail:** an Online Mailbox (New, Old and Sent) and Write Mail. Mail to yourself arrives; mail to buddies gets replies.
+- **Buddy List and IMs:** buddies sign on and off with door sounds, and they'll IM you.
+- **People Connection:** the *Town Square - Lobby 42* chat room.
+- **Sign Off:** "Goodbye!"
 
-## How to Run
+## Running it
 
-1.  Ensure you have the necessary image and audio assets in appropriately named `img/` and `audio/` folders in the project's root directory.
-    *   Required images (examples): `aol-icon.png`, `my-computer-icon.png`, `recycle-bin-icon.png`, `aol-logo.png`.
-    *   Required audio: `dialup.mp3`.
-2.  Open the `index.html` file in a modern web browser.
+It's a static site. Serve the folder with anything:
 
-## Future Ideas & Roadmap
+```sh
+npx http-server .        # or: python3 -m http.server
+```
 
-This project has a lot of potential for expansion! Here are some of the exciting features planned or envisioned:
+Then open http://localhost:8080 (or the port your server prints). It deploys as-is to GitHub Pages, Netlify and similar hosts.
 
-*   **Core OS Enhancements:**
-    *   Draggable desktop icons with persistent positions (using browser local storage).
-    *   Full minimize and restore functionality for application windows via the taskbar.
-    *   A more robust application framework for easier integration of new apps.
-    *   A system boot-up sequence (BIOS, OS loading screen) with a skip option.
-    *   Deeper use of browser local storage for user preferences and data persistence.
-*   **New Applications:**
-    *   **Paint:** A simple drawing application.
-    *   **Solitaire:** The classic card game.
-    *   **Notepad:** A basic text editor.
-*   **Application Enhancements:**
-    *   **AOL:**
-        *   Interactive login sequence with a "running man" animation (using sequential static images).
-        *   Mock internal AOL screens after "login."
-    *   **My Computer:**
-        *   Display a mock "C:" drive.
-        *   Simulate files and folders based on data stored in the browser's local storage, allowing for basic file system emulation.
-*   **Advanced Features:**
-    *   A more sophisticated application "installation" or management system within the WebOS.
-    *   Themes or appearance customization.
-    *   Basic file operations within "My Computer" (create mock files/folders).
+- **Opening `index.html` directly:** from `file://` most things work, but DOOM won't, because browsers refuse to load WebAssembly from disk. Use a local server.
+- **Skipping the boot:** add `?desktop` to the URL (`index.html?desktop`) to jump straight to the desktop. It's handy while developing.
 
-## Contributing (Optional)
+## Project layout
 
-(If you're open to contributions, outline how others can contribute here.)
+```
+index.html            the page; loads everything below in order
+css/win98.css         Windows 98 chrome: bevels, windows, menus, taskbar, desktop
+css/boot.css          power screen, BIOS, splash, logon, shutdown
+css/apps.css          per-app styles
+css/aol.css           America Online
+js/util.js            DOM helpers and storage wrapper
+js/icons.js           pixel-art icon library, drawn procedurally to canvas
+js/sound.js           Web Audio synthesis of every sound
+js/fs.js              the virtual C: drive (localStorage)
+js/wm.js              window manager, menus, message boxes
+js/shell.js           desktop icons, taskbar, Start menu, program registry
+js/dialogs.js         Open / Save As common dialog
+js/web.js             Wayback Machine browser panes
+js/boot.js            the power-on to desktop sequence (and back)
+js/apps/*.js          Notepad, Explorer, MS-DOS, Minesweeper, DOOM, IE, AOL, system dialogs
+apps/doom/            DOOM host page, engine (WASM) and shareware IWAD
+fonts/                MS Sans Serif pixel font and VT323, with their licenses
+```
 
----
+To add a program, call `Shell.register('id', { name, icon, launch(arg) })` and open a window with `WM.open({...})`. The apps in `js/apps/` show the pattern.
 
-*This README will be updated as the project progresses.*
+## Credits and licenses
+
+- **DOOM engine:** [cloudflare/doom-wasm](https://github.com/cloudflare/doom-wasm), a WebAssembly port of [Chocolate Doom](https://www.chocolate-doom.org/). It's GPL-2.0; the source is at those links. The binary was taken from the npm package `@nicejsisverycool/tizendoom`.
+- **DOOM game data:** `doom1.wad` is the DOOM v1.9 shareware release by id Software, which id allowed to be freely distributed unmodified.
+- **MS Sans Serif font:** the pixel version is by "lou" on FontStruct (CC BY-SA 3.0), via [98.css](https://github.com/jdan/98.css); the license files are in `fonts/`.
+- **VT323 font:** by Peter Hull (SIL Open Font License 1.1).
+- **Archived web pages:** served live by the [Internet Archive's Wayback Machine](https://web.archive.org/). Please consider supporting them.
+- **Icons, sounds and the startup chime:** original creations for this project, drawn and synthesized in code. No Microsoft, Compaq or AOL assets are included.
+
+This is a fan-made nostalgia project. It isn't affiliated with or endorsed by Microsoft, HP/Compaq, AOL or id Software. Windows, America Online and DOOM are trademarks of their respective owners.

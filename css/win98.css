@@ -303,8 +303,7 @@ body.dragging, body.dragging * { cursor: inherit; }
 /* ---------- Start menu ---------- */
 #start-menu {
   position: absolute;
-  left: 2px; bottom: 26px;
-  z-index: 15000;
+  z-index: 20000;
   display: flex;
   padding: 3px;
   background: var(--face);

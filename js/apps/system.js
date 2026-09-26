@@ -82,14 +82,12 @@
     // Everything behind the dialog goes grey, just like the real thing.
     var veil = h('div', { className: 'shutdown-veil' });
     document.getElementById('desktop').appendChild(veil);
-    document.getElementById('taskbar').classList.add('veiled');
-    var win = WM.dialog({ app: 'shutdown', title: 'Shut Down Windows', width: 330, taskbar: false, content: h('div', { className: 'shutdown-dialog' }, [
+    var win = WM.dialog({ app: 'shutdown', title: 'Shut Down Windows', width: 330, taskbar: false, className: 'above-veil', content: h('div', { className: 'shutdown-dialog' }, [
       U.img('shutdown', 32),
       h('div', null, [h('p', null, 'What do you want the computer to do?'), h('div', { className: 'radios' }, radios)]),
       h('div', { className: 'button-row' }, [ok, cancel, help])
     ]) });
-    win.el.style.zIndex = 20001;
-    win.on('close', function () { veil.remove(); document.getElementById('taskbar').classList.remove('veiled'); });
+    win.on('close', function () { veil.remove(); });
     ok.addEventListener('click', function () {
       win.close(true);
       if (choice === 'dos') { Shell.launch('msdos', { fullscreen: true, dosMode: true }); return; }
