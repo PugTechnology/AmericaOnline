@@ -124,8 +124,12 @@
       return false;
     }
   }
+  // Each mutation snapshots the tree first; if saving fails (storage full) the
+  // tree is rolled back so the screen never shows a change that wasn't saved.
+  var snapshot = null;
   function changed(path) {
     var ok = persist();
+    if (!ok && snapshot) root = JSON.parse(snapshot);
     listeners.forEach(function (fn) { try { fn(path); } catch (e) { console.error(e); } });
     if (!ok) throw new Error('DISKFULL');
   }
@@ -220,17 +224,11 @@
       var k = childKey(parent, name);
       if (k !== null && parent.c[k].t === 'd') throw new Error('ISDIR');
       if (k !== null && parent.c[k].sys) throw new Error('READONLY');
-      var prev = k !== null ? parent.c[k] : null;
       var key = k !== null ? k : name;
       parent.c[key] = file(text);
       parent.c[key].m = now();
       parent.m = now();
-      try { changed(join(dirname(path), key)); }
-      catch (e) {
-        if (prev) parent.c[key] = prev; else delete parent.c[key];
-        persist();
-        throw e;
-      }
+      changed(join(dirname(path), key));
     },
 
     mkdir: function (path) {
@@ -285,6 +283,7 @@
       if (k === null) return;
       var node = bin.c[k], dest = resolve(node.orig || 'C:\\My Documents');
       if (!dest || dest.t !== 'd') dest = resolve('C:\\My Documents');
+      if (!dest || dest.t !== 'd') dest = resolve('C:');
       var name = k;
       while (childKey(dest, name) !== null) name = 'Copy of ' + name;
       delete node.orig; delete node.deleted;
@@ -338,6 +337,20 @@
         default: return (path ? path + '\n' : '') + 'The file could not be accessed.';
       }
     }
+  };
+
+  ['write', 'mkdir', 'rename', 'remove', 'recycle', 'restore', 'emptyRecycleBin'].forEach(function (name) {
+    var fn = FS[name];
+    FS[name] = function () {
+      snapshot = JSON.stringify(root);
+      try { return fn.apply(FS, arguments); } finally { snapshot = null; }
+    };
+  });
+  // When the disk is too full even to move a file to the Recycle Bin, delete it outright.
+  var recycle = FS.recycle;
+  FS.recycle = function (path) {
+    try { return recycle(path); }
+    catch (e) { if (e.message === 'DISKFULL') return FS.remove(path); throw e; }
   };
 
   load();

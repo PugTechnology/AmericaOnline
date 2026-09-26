@@ -94,7 +94,7 @@
       Boot.shutdown(choice);
     });
     cancel.addEventListener('click', function () { win.close(true); });
-    help.addEventListener('click', function () { Shell.launch('help', 'shutdown'); });
+    help.addEventListener('click', function () { win.close(true); Shell.launch('help', 'shutdown'); });
     win.onKey = function (e) {
       if (e.key === 'Enter') { ok.click(); return true; }
       if (e.key === 'Escape') { win.close(true); return true; }

@@ -159,6 +159,8 @@
       case 'Enter': activateHot(menu); break;
       case 'Escape': Menu.closeFrom(Math.max(0, menu.level)); break;
       default:
+        // Ctrl/Cmd shortcuts (Cmd+S, Ctrl+R...) are not menu accelerators.
+        if (e.metaKey || e.ctrlKey || e.key.length !== 1) return false;
         var ch = e.key.toLowerCase();
         var idx = menu.items.findIndex(function (it) { return it && it.label && U.accel(it.label) === ch; });
         if (idx === -1) return true;
@@ -215,7 +217,12 @@
     return bar;
   };
 
-  document.addEventListener('pointerdown', function () { if (Menu.stack.length) Menu.closeAll(); });
+  // Capture phase, so clicks on things that stop propagation (icons, taskbar) still close menus.
+  document.addEventListener('pointerdown', function (e) {
+    if (!Menu.stack.length) return;
+    if (e.target.closest && e.target.closest('.menu, .mb-item, #start-button')) return;
+    Menu.closeAll();
+  }, true);
   window.addEventListener('blur', function () { if (Menu.stack.length) Menu.closeAll(); });
 
   // =====================================================================
@@ -445,8 +452,9 @@
       }, dir === 'se' ? 'nwse-resize' : getComputedStyle(e.target).cursor);
     }
 
-    el.addEventListener('pointerdown', function () {
-      if (win.modalChild) { win.modalChild.flash(); return; }
+    el.addEventListener('pointerdown', function (e) {
+      // A modal dialog blocks its owner completely.
+      if (win.modalChild && !win.modalChild.closed) { e.preventDefault(); e.stopPropagation(); win.modalChild.flash(); return; }
       WM.focus(win);
     }, true);
 
@@ -476,6 +484,12 @@
 
   WM.focus = function (win) {
     if (!win || win.closed) return;
+    // Focusing a window that owns a modal dialog focuses the dialog instead.
+    while (win.modalChild && !win.modalChild.closed) {
+      if (win.minimized) { win.minimized = false; win.el.classList.remove('minimized'); }
+      win.el.style.zIndex = ++zTop;
+      win = win.modalChild;
+    }
     if (win.minimized) { win.minimized = false; win.el.classList.remove('minimized'); }
     if (WM.active !== win) {
       if (WM.active) { WM.active.el.classList.remove('active'); WM.active.fire('blur'); }
@@ -495,9 +509,11 @@
     emit();
   };
 
+  // Dialogs first, so their owners can then ask about unsaved work.
   WM.closeAll = function () {
-    return WM.windows.slice().reduce(function (p, w) {
-      return p.then(function (ok) { return ok ? w.close() : false; });
+    var list = WM.windows.slice().sort(function (a, b) { return (b.owner ? 1 : 0) - (a.owner ? 1 : 0); });
+    return list.reduce(function (p, w) {
+      return p.then(function (ok) { return !ok ? false : w.closed ? true : w.close(); });
     }, Promise.resolve(true));
   };
 
@@ -593,7 +609,7 @@
   // Simple modal dialog with arbitrary content and a button row.
   WM.dialog = function (o) {
     var win = WM.open(Object.assign({ dialog: true, resizable: false, height: 'auto' }, o));
-    if (o.width) win.el.style.width = o.width + 'px';
+    if (o.width) win.el.style.width = Math.min(o.width, desktopRect().w - 8) + 'px';
     win.center();
     return win;
   };
@@ -606,6 +622,9 @@
     var w = WM.active;
     if (e.altKey && e.key === 'F4') { e.preventDefault(); if (w) w.close(); return; }
     if (!w) return;
+    // Enter/Space on a focused button presses that button, not the dialog default.
+    var a = document.activeElement;
+    if ((e.key === 'Enter' || e.key === ' ') && a && a.tagName === 'BUTTON' && w.el.contains(a)) return;
     if (w.onKey && w.onKey(e)) { e.preventDefault(); return; }
     if (e.altKey && !e.ctrlKey && w.menuAccel && e.key.length === 1) {
       if (w.menuAccel(e.key.toLowerCase())) e.preventDefault();

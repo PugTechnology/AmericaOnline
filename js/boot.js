@@ -317,7 +317,7 @@
       cancel.addEventListener('click', function () { user.value = user.value || 'Guest'; submit(); });
       win.onKey = function (e) {
         if (e.key === 'Enter') { submit(); return true; }
-        if (e.key === 'Escape') { user.value = user.value || 'Guest'; submit(); return true; }
+        if (e.key === 'Escape' && !e.ctrlKey) { user.value = user.value || 'Guest'; submit(); return true; }
         return false;
       };
       win.on('close', function () { resolve(); });

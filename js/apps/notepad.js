@@ -114,7 +114,8 @@
       } else exec('paste');
     }
 
-    var lastFind = '', matchCase = false;
+    var lastFind = '', matchCase = false, findWin = null;
+    win.on('close', function () { if (findWin) findWin.close(true); });
     function findNext(term) {
       term = term || lastFind;
       if (!term) return findDialog();
@@ -135,7 +136,8 @@
       var mc = h('input', { type: 'checkbox', checked: matchCase });
       var next = h('button', { className: 'btn default' }, U.label('&Find Next'));
       var cancel = h('button', { className: 'btn' }, 'Cancel');
-      var d = WM.dialog({
+      if (findWin && !findWin.closed) { findWin.focus(); return; }
+      var d = findWin = WM.dialog({
         title: 'Find', owner: win, modal: false, width: 360,
         content: h('div', { className: 'find-dialog' }, [
           h('div', { className: 'row' }, [h('label', null, U.label('Fi&nd what:')), input]),
@@ -211,6 +213,7 @@
 
     ta.addEventListener('input', markDirty);
     ta.addEventListener('keydown', function (e) {
+      if (win.modalChild) { e.preventDefault(); return; }
       if (e.key === 'F5') { e.preventDefault(); timeDate(); }
       if (e.key === 'F3') { e.preventDefault(); findNext(); }
       if (e.key === 'Tab') { e.preventDefault(); insert('\t'); }

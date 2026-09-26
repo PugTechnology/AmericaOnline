@@ -431,3 +431,6 @@ body.dragging, body.dragging * { cursor: inherit; }
 
 /* Win98 showed focus with the dotted label outline, not a browser ring. */
 .desk-icon:focus, .icon-view:focus, .icon-view .item:focus, .dos-screen:focus, .mine-grid:focus { outline: none; }
+
+/* Let pointer events drive these on touch screens instead of scrolling/zooming. */
+.title-bar, .resize-edge, .resize-grip, .desk-icon, .mine-grid, .menubar { touch-action: none; }

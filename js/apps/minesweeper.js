@@ -121,6 +121,7 @@
         if (cur.open || cur.flag === 1) continue;
         cur.open = true; revealedCount++;
         cur.el.className = 'cell open';
+        cur.el.textContent = '';
         if (cur.n) { cur.el.textContent = cur.n; cur.el.style.color = NUM_COLORS[cur.n]; }
         else around(cur).forEach(function (n) { if (!n.open) stack.push(n); });
       }
@@ -192,7 +193,9 @@
       });
       el.addEventListener('dblclick', function () { chord(c); });
     }
-    document.addEventListener('pointerup', function () { if (state === 'play' && !win.closed) drawFace(faceCanvas, 'smile'); });
+    function relax() { if (state === 'play') drawFace(faceCanvas, 'smile'); }
+    document.addEventListener('pointerup', relax);
+    win.on('close', function () { clearInterval(timer); document.removeEventListener('pointerup', relax); });
 
     faceBtn.addEventListener('click', reset);
 

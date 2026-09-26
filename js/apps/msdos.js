@@ -124,6 +124,13 @@
       return FS.join.apply(null, outp);
     }
 
+    // Split arguments on spaces, keeping "quoted names" together.
+    function args(a) {
+      var out = [];
+      (a || '').replace(/"([^"]*)"|(\S+)/g, function (m, q, w) { out.push(q != null ? q : w); });
+      return out;
+    }
+
     function notReady(letter) {
       U.sound('floppyRead', 1400);
       return U.wait(1400).then(function () {
@@ -255,12 +262,12 @@
         try { FS.remove(p); } catch (err) { print('Access denied\n'); }
       },
       ren: function (a) {
-        var parts = (a || '').split(/\s+/);
+        var parts = args(a);
         if (parts.length < 2) { print('Required parameter missing\n'); return; }
         try { FS.rename(resolvePath(parts[0]), parts[1]); } catch (err) { print(err.message === 'FILENOTFOUND' ? 'File not found\n' : 'Duplicate file name or file not found\n'); }
       },
       copy: function (a) {
-        var parts = (a || '').split(/\s+/);
+        var parts = args(a);
         if (parts.length < 2) { print('Required parameter missing\n'); return; }
         var src = resolvePath(parts[0]), n = FS.stat(src);
         if (!n || n.t !== 'f' || n.bin) { print('File not found - ' + parts[0] + '\n'); return; }

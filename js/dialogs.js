@@ -113,6 +113,8 @@
 
       function accept() {
         var name = nameInput.value.trim();
+        // "*.txt" and friends are filters, as in the real dialog.
+        if (/[*?]/.test(name)) { nameInput.select(); return; }
         if (!name) {
           if (selectedName && FS.isDir(FS.join(cwd, selectedName))) { cwd = FS.join(cwd, selectedName); refresh(); }
           return;

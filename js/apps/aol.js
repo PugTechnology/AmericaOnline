@@ -76,6 +76,7 @@
       el.style.width = w + 'px';
       if (o.height !== 'auto') el.style.height = hh + 'px';
       var x = o.x, y = o.y;
+      if (o.height === 'auto') { area.appendChild(el); hh = el.offsetHeight; }
       if (o.x === 'right') x = Math.max(0, ar.w - w - 4);
       if (x == null) x = Math.max(0, Math.round((ar.w - w) / 2) + (kids.length % 5) * 14 - 28);
       if (y == null) y = Math.max(0, Math.round((ar.h - hh) / 3) + (kids.length % 5) * 14 - 20);
@@ -199,7 +200,8 @@
       splash.remove();
       document.body.classList.remove('busy');
       splashing = false;
-      openClient(arg);
+      // Logged off or shut down while loading? Then don't pop up afterwards.
+      if (Shell.ready() && document.body.contains(document.getElementById('desktop'))) openClient(arg);
     }, 1600);
     return null;
   }

@@ -69,15 +69,20 @@
 
   U.clamp = function (v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
 
-  // Double-click that also works as double-tap on touch screens.
+  // Double-click that also works as double-tap on touch screens. Taps are matched on
+  // the bound element (the target can change as selection styling appears), and the
+  // browser's own synthetic dblclick after a double-tap is ignored.
   U.onActivate = function (el, fn) {
-    var lastTap = 0, lastTarget = null;
-    el.addEventListener('dblclick', function (e) { fn(e); });
+    var lastTap = 0, touchFired = 0;
+    el.addEventListener('dblclick', function (e) {
+      if (Date.now() - touchFired < 600) return;
+      fn(e);
+    });
     el.addEventListener('pointerup', function (e) {
       if (e.pointerType !== 'touch') return;
       var t = Date.now();
-      if (t - lastTap < 400 && lastTarget === e.target) { lastTap = 0; fn(e); }
-      else { lastTap = t; lastTarget = e.target; }
+      if (t - lastTap < 400) { lastTap = 0; touchFired = t; fn(e); }
+      else lastTap = t;
     });
   };
 

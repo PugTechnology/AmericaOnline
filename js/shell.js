@@ -170,6 +170,7 @@
   function bindIcon(el, it) {
     U.onActivate(el, function () { select([it.id]); it.open(); });
     el.addEventListener('keydown', function (e) {
+      if (WM.active || !Shell.ready()) return;
       if (e.key === 'Enter') it.open();
       if (e.key === 'Delete' && it.path) deleteDesktopFile(it);
       if (e.key === 'F2' && it.path) renameDesktopIcon(el, it);
@@ -282,6 +283,7 @@
     e.preventDefault();
     // Only the bare desktop gets this menu; windows sit inside the desktop element.
     if (e.target !== desktopEl && e.target.id !== 'windows-layer') return;
+    if (!Shell.ready()) return;
     Menu.popup([
       { label: 'Acti&ve Desktop', items: [{ label: '&View As Web Page', disabled: true }, { label: '&Customize my Desktop...', action: function () { Shell.launch('control', 'display'); } }] },
       '-',
@@ -326,6 +328,7 @@
     desktopEl.addEventListener('contextmenu', desktopContextMenu);
     desktopEl.addEventListener('pointerdown', function (e) {
       if (e.target !== desktopEl && e.target.id !== 'windows-layer') return;
+      if (!Shell.ready()) return;
       WM.deactivateAll();
       select([]);
       if (e.button !== 0) return;
@@ -382,6 +385,7 @@
     });
   }
 
+  var clockTimer = null;
   function startClock(clockEl) {
     function tick() {
       var d = new Date();
@@ -390,7 +394,8 @@
       clockEl.title = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     }
     tick();
-    setInterval(tick, 1000 * 10);
+    clearInterval(clockTimer);
+    clockTimer = setInterval(tick, 1000 * 10);
   }
 
   // =====================================================================
@@ -499,7 +504,7 @@
     applyDesktopStyle();
 
     startBtn = h('button', { id: 'start-button' }, [U.img('windows-flag', 16), h('span', null, 'Start')]);
-    startBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); toggleStart(); });
+    startBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); if (Shell.ready()) toggleStart(); });
 
     var quick = h('div', { id: 'quick-launch' }, [
       quickBtn('ie', 'Launch Internet Explorer Browser', function () { Shell.launch('ie'); }),
@@ -538,15 +543,33 @@
     startClock(clock);
     bindDesktop();
     renderDesktop();
+    updateMuteIcon(vol);
+    bindGlobalsOnce();
+  };
+
+  // Build runs on every logon; document-level hooks must only be added once.
+  var globalsBound = false;
+  function bindGlobalsOnce() {
+    if (globalsBound) return;
+    globalsBound = true;
     WM.onChange(renderTaskbar);
     FS.onChange(function () { renderDesktop(); });
     window.addEventListener('resize', renderDesktop);
-    updateMuteIcon(vol);
+    // The Windows key opens Start only when tapped on its own (so Cmd+S on a Mac doesn't).
+    var metaAlone = false;
     document.addEventListener('keydown', function (e) {
-      if ((e.key === 'Meta' || e.key === 'OS') && !e.repeat) { toggleStart(); e.preventDefault(); }
-      if (e.ctrlKey && e.key === 'Escape') { toggleStart(); e.preventDefault(); }
+      if (e.key === 'Meta' || e.key === 'OS') { metaAlone = !e.repeat; return; }
+      metaAlone = false;
+      if (e.ctrlKey && e.key === 'Escape' && Shell.ready()) { toggleStart(); e.preventDefault(); }
     });
-  };
+    document.addEventListener('keyup', function (e) {
+      if ((e.key === 'Meta' || e.key === 'OS') && metaAlone && Shell.ready()) toggleStart();
+      metaAlone = false;
+    });
+  }
+
+  // True once someone has logged on and the desktop is live.
+  Shell.ready = function () { return !window.Boot || Boot.state === 'desktop'; };
 
   function quickBtn(icon, title, fn) {
     var b = h('button', { title: title }, U.img(icon === 'desktop-show' ? 'display' : icon, 16));
