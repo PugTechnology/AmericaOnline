@@ -1,0 +1,242 @@
+/* America Online 4.0 */
+
+.aol .window-body { margin-top: 0; }
+.aol-frame { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+/* Toolbar */
+.aol-toolbar {
+  display: flex; flex: none; gap: 0; padding: 2px 2px 3px; overflow-x: auto; overflow-y: hidden;
+  background: linear-gradient(#d8d8d8, #c0c0c0); box-shadow: var(--thin-raised); scrollbar-width: none;
+}
+.aol-toolbar::-webkit-scrollbar { display: none; }
+.aol-tb {
+  flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  min-width: 52px; padding: 2px 3px 1px; border: none; background: transparent; font-size: 11px;
+}
+.aol-tb img { width: 32px; height: 32px; }
+.aol-tb span { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.aol-tb .drop { width: 0; height: 0; border: 3px solid transparent; border-top: 3px solid #000; border-bottom: 0; }
+.aol-tb:hover { box-shadow: var(--thin-raised); }
+.aol-tb:active { box-shadow: var(--thin-sunken); }
+.aol-toolbar.offline .aol-tb { color: var(--shadow); }
+.aol-toolbar.offline .aol-tb img { filter: grayscale(1) opacity(0.5); }
+.aol-toolbar.offline .aol-tb .drop { border-top-color: var(--shadow); }
+.aol-toolbar.offline .aol-tb:hover { box-shadow: none; }
+
+/* Navigation / keyword bar */
+.aol-navbar { display: flex; flex: none; align-items: center; gap: 3px; padding: 3px 4px; background: var(--face); box-shadow: var(--thin-raised); }
+.aol-nav-btn { width: 24px; height: 22px; padding: 0; border: none; background: var(--face); box-shadow: var(--raised); display: flex; align-items: center; justify-content: center; }
+.aol-nav-btn:active:not(:disabled) { box-shadow: var(--pressed); }
+.aol-nav-btn:disabled img { filter: grayscale(1) opacity(0.4); }
+.aol-kw-wrap { flex: 1; min-width: 80px; display: flex; background: #fff; box-shadow: var(--sunken); padding: 2px 4px; height: 22px; }
+.aol-kw { flex: 1; min-width: 0; border: none; outline: none; padding: 0; background: transparent; font-size: 11px; }
+.aol-kw:disabled { background: transparent; }
+.aol-kw::placeholder { color: #666; }
+.aol-go { min-width: 36px; font-weight: bold; padding: 0 6px; }
+.aol-small { min-width: 0; padding: 0 6px; display: flex; align-items: center; gap: 3px; }
+@media (max-width: 560px) { .aol-small { display: none; } }
+
+/* MDI */
+.aol-mdi {
+  flex: 1; position: relative; overflow: hidden; margin-top: 2px;
+  background: #3f5e8c linear-gradient(135deg, #36527d 0%, #4a6fa5 55%, #3a5783 100%);
+  box-shadow: var(--sunken);
+}
+.mdi-child { position: absolute; z-index: 1; }
+.mdi-child.mdi-min .window-body, .mdi-child.mdi-min .resize-grip { display: none; }
+
+/* AOL-style buttons */
+.aol-btn {
+  min-height: 23px; padding: 0 10px; border: none; background: linear-gradient(#e6e6e6, #c0c0c0);
+  box-shadow: var(--raised); font-weight: bold; font-size: 11px; color: #000; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+}
+.aol-btn:active:not(:disabled) { box-shadow: var(--pressed); }
+.aol-btn:disabled { color: var(--shadow); }
+.aol-btn.big { min-height: 27px; padding: 0 16px; }
+.aol-btn.default { outline: 1px dotted #000; outline-offset: -4px; }
+.mb-buttons { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; padding-top: 6px; }
+.note { color: #555; font-size: 10px; }
+
+/* Sign On */
+.signon { display: flex; flex-direction: column; background: var(--face); }
+.so-art {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: linear-gradient(135deg, #0b2e6f, #1f5dc4 60%, #3d8ae6);
+  color: #fff; border-bottom: 2px solid #ffcc00;
+}
+.so-art img { width: 64px; height: 64px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,.4)); }
+.so-name { font: italic bold 26px/1 Georgia, "Times New Roman", serif; text-shadow: 2px 2px 0 rgba(0,0,0,.35); -webkit-font-smoothing: antialiased; }
+.so-ver { font-size: 11px; color: #cfe0ff; margin-top: 4px; }
+.so-form { padding: 12px 18px 4px; display: flex; flex-direction: column; gap: 8px; }
+.so-row { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 8px; }
+.so-row label { font-weight: bold; }
+.so-row.disabled label { color: var(--shadow); }
+.so-row .field { width: 100%; }
+.so-buttons { display: flex; gap: 6px; padding: 10px 12px 12px; justify-content: flex-end; flex-wrap: wrap; }
+.so-buttons.connecting { justify-content: center; }
+.so-buttons .aol-btn.big { min-width: 100px; }
+.so-progress { padding: 14px 14px 2px; }
+.so-panels { display: flex; justify-content: center; gap: 14px; }
+.so-panel {
+  width: 88px; height: 88px; display: flex; align-items: center; justify-content: center;
+  background: #fff; box-shadow: var(--sunken); transition: filter .3s;
+}
+.so-panel img { width: 64px; height: 64px; }
+.so-panel.dim img { filter: grayscale(1) brightness(1.25) opacity(0.35); }
+.so-panel.active img { animation: so-pulse 0.9s ease-in-out infinite; }
+.so-panel.active:nth-child(2) img { animation: so-run 0.45s steps(2) infinite; }
+@keyframes so-pulse { 50% { transform: scale(1.06); } }
+@keyframes so-run { 0% { transform: translate(-3px, 0) rotate(-3deg); } 50% { transform: translate(3px, -3px) rotate(3deg); } 100% { transform: translate(-3px, 0) rotate(-3deg); } }
+.so-step { margin: 12px 0 2px; text-align: center; font-weight: bold; min-height: 14px; }
+
+/* Setup / new user dialogs */
+.aol-setup { padding: 4px 12px 0; }
+.aol-setup p { margin: 0 0 6px; }
+.aol-setup .check { margin-top: 4px; }
+.aol-newuser { padding: 12px; }
+.aol-newuser .nu-head { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.aol-newuser input { width: 150px; }
+.aol-err { color: #c00000; min-height: 14px; margin-top: 6px; }
+
+/* Welcome */
+.aol-welcome { flex: 1; display: flex; min-height: 0; background: #fff; }
+.wl-left {
+  width: 150px; flex: none; display: flex; flex-direction: column; gap: 3px; padding: 8px 8px;
+  background: linear-gradient(#1b3f8b, #2c63c7);
+}
+.wl-mail {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 6px; margin-bottom: 6px;
+  border: none; background: transparent; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer;
+}
+.wl-mail img { width: 64px; height: 64px; }
+.wl-mail:hover span { text-decoration: underline; color: #ffe066; }
+.wl-side {
+  display: flex; align-items: center; gap: 6px; padding: 3px 6px; border: none; text-align: left;
+  background: rgba(255,255,255,0.12); color: #fff; font-size: 11px; cursor: pointer;
+}
+.wl-side:hover { background: rgba(255,255,255,0.28); }
+.wl-main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: auto; }
+.wl-banner {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 12px;
+  background: linear-gradient(90deg, #ffcc00, #ff9900); color: #1b3f8b;
+}
+.wl-hello { font: italic bold 20px Georgia, "Times New Roman", serif; -webkit-font-smoothing: antialiased; }
+.wl-date { font-size: 11px; color: #333; }
+.wl-today { padding: 6px 12px 4px; flex: 1; }
+.wl-today h3 { margin: 4px 0 6px; font: bold 13px Arial, sans-serif; color: #b01e23; -webkit-font-smoothing: antialiased; }
+.wl-news { margin: 0; padding-left: 16px; font: 12px/1.6 Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+.wl-news a { color: #0000cc; }
+.wl-news a:hover { color: #cc0000; }
+.wl-promos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 6px 8px 8px; }
+.wl-promo {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 6px; border: none; color: #fff; text-align: left; cursor: pointer;
+  box-shadow: inset -2px -2px rgba(0,0,0,.25), inset 2px 2px rgba(255,255,255,.3);
+}
+.wl-promo b { font: bold 12px Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+.wl-promo span { font-size: 10px; opacity: .9; }
+@media (max-width: 700px) { .wl-promos { grid-template-columns: repeat(2, 1fr); } .wl-left { width: 118px; } }
+
+/* Channels */
+.ch-list { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 3px; overflow: auto; background: #1b3f8b; }
+.ch-btn {
+  text-align: left; padding: 3px 6px 3px 10px; border: none; color: #fff; font: bold 11px Arial, sans-serif; -webkit-font-smoothing: antialiased;
+  background: linear-gradient(90deg, var(--c) 0 6px, #2c4f93 6px); cursor: pointer;
+}
+.ch-btn:hover { background: linear-gradient(90deg, var(--c) 0 6px, var(--c) 6px); }
+.aol-channel { flex: 1; display: flex; flex-direction: column; background: #fff; min-height: 0; }
+.chw-banner { padding: 12px 14px; color: #fff; }
+.chw-name { font: italic bold 24px Georgia, "Times New Roman", serif; text-shadow: 2px 2px 0 rgba(0,0,0,.3); -webkit-font-smoothing: antialiased; }
+.chw-tag { font-size: 11px; margin-top: 3px; opacity: .92; }
+.chw-grid { flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 10px; align-content: start; overflow: auto; }
+.chw-link {
+  display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: none; background: linear-gradient(#f4f4f4, #dcdcdc);
+  box-shadow: var(--raised); text-align: left; font-weight: bold; cursor: pointer;
+}
+.chw-link:active { box-shadow: var(--pressed); }
+.chw-link:hover span { color: #0000cc; text-decoration: underline; }
+.chw-foot { padding: 4px 10px; background: var(--face); color: #333; font-size: 10px; text-align: right; }
+
+/* Web windows */
+.aol-web { flex: 1; display: flex; padding: 2px; min-height: 0; }
+
+/* Mail */
+.aol-mailbox, .aol-read, .aol-write, .aol-im, .aol-sendim { flex: 1; display: flex; flex-direction: column; padding: 6px; min-height: 0; }
+.mb-panel { display: flex; flex-direction: column; gap: 4px; min-height: 0; padding: 6px; }
+.mb-list { flex: 1; padding: 0; }
+.mail-table td { cursor: default; }
+.mail-table img { vertical-align: -3px; }
+.mb-count { font-size: 10px; color: #333; }
+.rd-head { display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 6px; }
+.rd-body { flex: 1; white-space: pre-wrap; font: 13px/1.35 Arial, sans-serif; padding: 8px; user-select: text; -webkit-font-smoothing: antialiased; }
+.wm-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; }
+.wm-grid label { font-weight: bold; }
+.wm-format { display: flex; gap: 2px; margin: 6px 0 2px; }
+.wm-fmt { min-width: 20px; padding: 1px 4px; text-align: center; background: var(--face); box-shadow: var(--raised); font-weight: bold; font-size: 10px; }
+.wm-body, .im-compose {
+  flex: 1; resize: none; border: none; outline: none; padding: 4px; box-shadow: var(--sunken); background: #fff;
+  font: 13px Arial, sans-serif; -webkit-font-smoothing: antialiased; min-height: 40px;
+}
+.wm-send { display: flex; gap: 6px; padding-top: 6px; }
+
+/* Buddy list */
+.aol-buddy { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--face); }
+.bl-head { display: flex; align-items: center; gap: 6px; padding: 6px; background: linear-gradient(#ffe066, #ffcc00); }
+.bl-head b { font-size: 12px; }
+.bl-tree { flex: 1; margin: 4px; padding: 3px; overflow: auto; }
+.bl-group { font-weight: bold; margin-top: 3px; }
+.bl-buddy { padding: 1px 3px 1px 14px; cursor: default; }
+.bl-buddy.selected { background: var(--navy); color: #fff; }
+.bl-buddy.flash { animation: bl-flash 1s steps(2) 3; }
+@keyframes bl-flash { 50% { background: #ffcc00; } }
+.bl-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 0 4px 4px; }
+.bl-btn { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 0; border: none; background: var(--face); box-shadow: var(--raised); font-size: 10px; }
+.bl-btn:active { box-shadow: var(--pressed); }
+
+/* IMs */
+.im-log { flex: 1; padding: 6px; font: 13px/1.4 Arial, sans-serif; -webkit-font-smoothing: antialiased; user-select: text; min-height: 60px; }
+.im-line b.me { color: #c00000; }
+.im-line b.them { color: #0000cc; }
+.im-toolbar { display: flex; gap: 2px; margin: 4px 0 2px; }
+.im-compose { flex: 0 0 56px; }
+.aol-sendim .so-row { grid-template-columns: 30px 1fr; margin-bottom: 6px; }
+
+/* Chat */
+.aol-chat { flex: 1; display: flex; gap: 6px; padding: 6px; min-height: 0; }
+.chat-main { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.chat-log { flex: 1; padding: 6px; font: 13px/1.45 Arial, sans-serif; -webkit-font-smoothing: antialiased; user-select: text; }
+.chat-line b { color: #000080; }
+.chat-line.me b { color: #c00000; }
+.chat-line.host { color: #555; font-style: italic; }
+.chat-line.host b { color: #555; }
+.chat-send { display: flex; gap: 4px; }
+.chat-input { flex: 1; }
+.chat-side { width: 140px; display: flex; flex-direction: column; gap: 4px; }
+.chat-count { font-weight: bold; }
+.chat-people { flex: 1; padding: 3px; }
+@media (max-width: 560px) { .chat-side { display: none; } }
+
+/* Quotes, weather, horoscopes */
+.aol-quotes, .aol-weather, .aol-horo, .aol-keyword, .aol-kwl, .aol-pc, .aol-profile, .aol-names, .aol-perks { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 8px; min-height: 0; background: var(--face); }
+.q-top, .wx-top, .kw-top { display: flex; align-items: center; gap: 8px; }
+.kw-top p { margin: 0; }
+.q-get { display: flex; align-items: center; gap: 6px; }
+.q-list { flex: 1; padding: 0; }
+.wx-out { flex: 1; background: #fff; box-shadow: var(--sunken); padding: 8px; overflow: auto; }
+.wx-out h3 { margin: 0 0 8px; font: bold 13px Arial, sans-serif; }
+.wx-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.wx-day { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; background: linear-gradient(#e8f2ff, #bcd8ff); text-align: center; font-size: 10px; }
+.hs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.hs-out { flex: 1; background: #fff; box-shadow: var(--sunken); padding: 10px; font: 12px/1.5 Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+.kwl { flex: 1; padding: 2px; }
+.kwl-row { padding: 1px 4px; cursor: default; display: flex; align-items: center; }
+.kwl-row.selected { background: var(--navy); color: #fff; }
+.aol-help { flex: 1; padding: 8px 12px; font: 12px/1.45 Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+.aol-help h4 { margin: 8px 0 2px; color: #1b3f8b; }
+.aol-help p { margin: 0 0 6px; }
+.pc-opts { display: flex; flex-direction: column; gap: 6px; padding-left: 8px; }
+.prof-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; }
+.names-list { height: 100px; }
+.perk { display: flex; gap: 10px; align-items: flex-start; padding: 6px; background: #fff; box-shadow: var(--thin-sunken); }
+.perk p { margin: 2px 0 0; }
+.msgbox-wrap { padding-bottom: 2px; }

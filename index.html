@@ -1,73 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows 98 Simulation</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="description" content="Power on a 1998 Compaq Presario: BIOS, Windows 98, America Online, Notepad and DOOM, in your browser.">
+  <meta name="theme-color" content="#008080">
+  <title>Compaq Presario</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='6' height='6' fill='%23f0461e'/%3E%3Crect x='9' y='1' width='6' height='6' fill='%2343b02a'/%3E%3Crect x='1' y='9' width='6' height='6' fill='%231d6fe0'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%23ffc81e'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/win98.css">
+  <link rel="stylesheet" href="css/boot.css">
+  <link rel="stylesheet" href="css/apps.css">
+  <link rel="stylesheet" href="css/aol.css">
 </head>
-<body>
-    <div id="desktop">
-        <!-- Desktop Icons will be dynamically added here or predefined -->
-        <div class="desktop-icon" id="aol-icon" style="top: 20px; left: 20px;">
-            <img src="img/aol-icon.png" alt="America Online">
-            <span>America Online</span>
-        </div>
-        <div class="desktop-icon" id="my-computer-icon" style="top: 120px; left: 20px;"> <!-- Adjusted top for spacing -->
-            <img src="img/my-computer-icon.png" alt="My Computer">
-            <span>My Computer</span>
-        </div>
-        <!-- Add more icons as needed -->
-        <div class="desktop-icon" id="recycle-bin-icon" style="top: 220px; left: 20px;"> <!-- Adjusted top for spacing -->
-            <img src="img/recycle-bin-icon.png" alt="Recycle Bin">
-            <span>Recycle Bin</span>
-        </div>
+<body class="w98">
+  <div id="machine"></div>
+  <noscript style="color:#aaa;font:16px monospace;padding:20px;display:block">This computer needs JavaScript to boot.</noscript>
 
-        <!-- Window Template (hidden by default) -->
-        <div class="window" id="aol-window" style="display: none;">
-            <div class="title-bar">
-                <span class="title">America Online</span>
-                <div class="title-bar-controls">
-                    <button class="minimize-btn">_</button>
-                    <button class="maximize-btn">[]</button>
-                    <button class="close-btn">X</button>
-                </div>
-            </div>
-            <div class="window-body" style="text-align: center; padding-top: 20px; background-color: #e0e0e0; font-family: 'Arial', sans-serif;">
-                <img src="img/aol-logo.png" alt="AOL Logo" style="width: 150px; margin-bottom: 20px;">
-                <h2>America Online</h2>
-                <form style="width: 200px; margin: 0 auto;">
-                    <label for="aol-username" style="display: block; margin-bottom: 5px;">ScreenName:</label>
-                    <input type="text" id="aol-username" value="Guest" disabled style="width: 100%; margin-bottom: 10px; padding: 5px; border: 1px solid #000;">
-                    
-                    <label for="aol-password" style="display: block; margin-bottom: 5px;">Password:</label>
-                    <input type="password" id="aol-password" disabled style="width: 100%; margin-bottom: 20px; padding: 5px; border: 1px solid #000;">
-                    
-                    <button type="button" class="aol-signon-btn" disabled style="padding: 10px 20px; background-color: #0055aa; color: white; border: 1px outset #ccc; font-weight: bold;">Sign On</button>
-                </form>
-                <audio id="dial-up-sound" src="assets/audio/placeholder-dialup.mp3" preload="auto"></audio>
-                <p style="font-size: 10px; color: #555; margin-top: 30px;">Version 4.0</p>
-            </div>
-        </div>
-    </div>
-    <div id="start-menu" style="display: none;">
-        <ul>
-            <li class="start-menu-item"><a href="#">Programs</a></li>
-            <li class="start-menu-item"><a href="#">Settings</a></li>
-            <li class="start-menu-item"><a href="#">Find</a></li>
-            <li class="start-menu-item"><a href="#">Help</a></li>
-            <li class="start-menu-item"><a href="#">Run...</a></li>
-            <li class="start-menu-separator"></li>
-            <li class="start-menu-item"><a href="#">Shut Down...</a></li>
-        </ul>
-    </div>
-    <div id="taskbar">
-        <button id="start-button">Start</button>
-        <div id="active-programs"></div>
-        <div id="system-time"></div>
-        <!-- Active programs might be represented here later -->
-    </div>
-
-    <script src="js/script.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/fs.js"></script>
+  <script src="js/wm.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/dialogs.js"></script>
+  <script src="js/web.js"></script>
+  <script src="js/apps/system.js"></script>
+  <script src="js/apps/notepad.js"></script>
+  <script src="js/apps/explorer.js"></script>
+  <script src="js/apps/msdos.js"></script>
+  <script src="js/apps/minesweeper.js"></script>
+  <script src="js/apps/doom.js"></script>
+  <script src="js/apps/ie.js"></script>
+  <script src="js/apps/aol-data.js"></script>
+  <script src="js/apps/aol.js"></script>
+  <script src="js/boot.js"></script>
+  <script>Boot.init();</script>
 </body>
 </html>

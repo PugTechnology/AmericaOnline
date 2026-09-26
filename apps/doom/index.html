@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DOOM</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  /* The canvas must not have a border or padding, or SDL's mouse coordinates drift. */
+  #canvas { display: block; background: #000; image-rendering: pixelated; outline: none; }
+  #status {
+    position: absolute; left: 0; top: 0; right: 0; padding: 6px 8px;
+    color: #aaa; font: 14px/1.3 "Courier New", monospace; white-space: pre-wrap; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+<div id="status">Loading DOOM...</div>
+<script>
+/*
+ * Hosts the Chocolate Doom WebAssembly build (cloudflare/doom-wasm, GPL-2.0) running the
+ * DOOM shareware IWAD. Savegames and config live in Emscripten's in-memory FS, so they're
+ * mirrored to IndexedDB to survive page reloads.
+ */
+(function () {
+  var SAVE_DIR = '/libsdl/doom-ws-wasm';
+  var DB_NAME = 'w98-doom', STORE = 'files';
+  var statusEl = document.getElementById('status');
+  var canvas = document.getElementById('canvas');
+
+  var CONFIG = [
+    'mouse_sensitivity 5', 'sfx_volume 8', 'music_volume 8', 'show_messages 1',
+    'key_right 77', 'key_left 75', 'key_up 72', 'key_down 80',
+    'key_strafeleft 51', 'key_straferight 52', 'key_fire 29', 'key_use 57',
+    'key_strafe 56', 'key_speed 54', 'use_mouse 0', 'use_joystick 0',
+    'screenblocks 10', 'detaillevel 0', 'snd_channels 8', 'snd_musicdevice 3',
+    'snd_sfxdevice 3', 'usegamma 1'
+  ].join('\n') + '\n';
+
+  function openDb() {
+    return new Promise(function (resolve) {
+      try {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function () { req.result.createObjectStore(STORE); };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { resolve(null); };
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  function loadSaved(db) {
+    return new Promise(function (resolve) {
+      if (!db) return resolve({});
+      var out = {};
+      try {
+        var cur = db.transaction(STORE).objectStore(STORE).openCursor();
+        cur.onsuccess = function () {
+          var c = cur.result;
+          if (!c) return resolve(out);
+          out[c.key] = c.value;
+          c.continue();
+        };
+        cur.onerror = function () { resolve(out); };
+      } catch (e) { resolve(out); }
+    });
+  }
+
+  function mkdirs(FS, path) {
+    var parts = path.split('/').filter(Boolean), cur = '';
+    parts.forEach(function (p) {
+      cur += '/' + p;
+      try { FS.mkdir(cur); } catch (e) { /* exists */ }
+    });
+  }
+
+  function startPersistence(db) {
+    if (!db) return;
+    var known = {};
+    setInterval(function () {
+      var FS = Module.FS, names;
+      try { names = FS.readdir(SAVE_DIR); } catch (e) { return; }
+      names.forEach(function (name) {
+        if (!/\.dsg$/i.test(name)) return;
+        var path = SAVE_DIR + '/' + name, st;
+        try { st = FS.stat(path); } catch (e) { return; }
+        var stamp = st.mtime.getTime() + ':' + st.size;
+        if (known[name] === stamp) return;
+        known[name] = stamp;
+        try {
+          var data = FS.readFile(path);
+          db.transaction(STORE, 'readwrite').objectStore(STORE).put(data, name);
+        } catch (e) { /* ignore */ }
+      });
+    }, 3000);
+  }
+
+  // Size the canvas to the largest 4:3 box that fits the frame (Chocolate Doom corrects
+  // DOOM's 320x200 to the 4:3 a CRT displayed it at).
+  function fit() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var scale = Math.min(w / 4, h / 3);
+    canvas.style.width = Math.floor(4 * scale) + 'px';
+    canvas.style.height = Math.floor(3 * scale) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  // Keep browser shortcuts (arrow scrolling, space, Alt menus) out of the way while playing.
+  window.addEventListener('keydown', function (e) {
+    if ([32, 37, 38, 39, 40, 18, 9].indexOf(e.keyCode) !== -1) e.preventDefault();
+  });
+  document.addEventListener('mousedown', function () { canvas.focus(); });
+
+  // Chrome may start the audio context suspended until the frame itself sees a gesture.
+  function resumeAudio() {
+    try {
+      var ctx = window.SDL2 && SDL2.audioContext;
+      if (ctx && ctx.state === 'suspended') ctx.resume();
+    } catch (e) { /* ignore */ }
+  }
+  ['keydown', 'mousedown', 'touchstart'].forEach(function (t) {
+    window.addEventListener(t, resumeAudio, true);
+  });
+
+  var savesPromise = openDb().then(function (db) {
+    return loadSaved(db).then(function (files) { return { db: db, files: files }; });
+  });
+
+  window.Module = {
+    noInitialRun: true,
+    canvas: canvas,
+    preRun: [function () {
+      Module.FS.createPreloadedFile('/', 'doom1.wad', 'doom1.wad', true, false);
+      Module.FS.writeFile('/default.cfg', CONFIG);
+      Module.addRunDependency('saves');
+      savesPromise.then(function (s) {
+        mkdirs(Module.FS, SAVE_DIR);
+        Object.keys(s.files).forEach(function (name) {
+          try { Module.FS.writeFile(SAVE_DIR + '/' + name, s.files[name]); } catch (e) { /* ignore */ }
+        });
+        Module._db = s.db;
+        Module.removeRunDependency('saves');
+      });
+    }],
+    onRuntimeInitialized: function () {
+      statusEl.style.display = 'none';
+      canvas.focus();
+      startPersistence(Module._db);
+      // OPL music stalls this build's main loop, so music stays off.
+      callMain(['-iwad', 'doom1.wad', '-window', '-nogui', '-config', 'default.cfg', '-nomusic']);
+      fit();
+    },
+    print: function (t) { console.log(t); },
+    printErr: function (t) { console.warn(t); },
+    setStatus: function (t) { if (t) statusEl.textContent = t; },
+    totalDependencies: 0,
+    monitorRunDependencies: function () {}
+  };
+
+  window.addEventListener('error', function (e) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#f55';
+    statusEl.textContent = 'DOOM crashed: ' + (e.message || e);
+  });
+})();
+</script>
+<script src="websockets-doom.js"></script>
+</body>
+</html>
