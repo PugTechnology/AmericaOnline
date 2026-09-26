@@ -154,8 +154,8 @@
   display: flex; justify-content: space-between; align-items: center; padding: 4px 5px; margin-bottom: 6px;
   box-shadow: inset -2px -2px var(--hilight), inset 2px 2px var(--shadow);
 }
-.mine-head .led { box-shadow: -1px -1px var(--shadow), 1px 1px var(--hilight); image-rendering: pixelated; }
-.mine-face { width: 26px; height: 26px; padding: 0; border: 1px solid var(--shadow); background: var(--face); box-shadow: var(--raised); display: flex; align-items: center; justify-content: center; }
+.mine-head .mine-led { flex: none; width: 39px; height: 23px; box-shadow: -1px -1px var(--shadow), 1px 1px var(--hilight); image-rendering: pixelated; }
+.mine-face { flex: none; width: 26px; height: 26px; padding: 0; border: 1px solid var(--shadow); background: var(--face); box-shadow: var(--raised); display: flex; align-items: center; justify-content: center; }
 .mine-face:active { box-shadow: inset 1px 1px var(--shadow); }
 .mine-face:active canvas { transform: translate(1px, 1px); }
 .mine-field { box-shadow: inset -3px -3px var(--hilight), inset 3px 3px var(--shadow); padding: 3px; }

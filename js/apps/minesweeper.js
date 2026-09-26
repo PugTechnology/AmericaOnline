@@ -54,8 +54,8 @@
     var marks = U.store.get('w98.mines.marks', true);
     var W, H, M, cells, state, flags, timer, seconds, firstClick, revealedCount;
 
-    var mineLed = h('canvas', { width: 39, height: 23, className: 'led' });
-    var timeLed = h('canvas', { width: 39, height: 23, className: 'led' });
+    var mineLed = h('canvas', { width: 39, height: 23, className: 'mine-led' });
+    var timeLed = h('canvas', { width: 39, height: 23, className: 'mine-led' });
     var faceCanvas = h('canvas', { width: 17, height: 17 });
     var faceBtn = h('button', { className: 'mine-face' }, faceCanvas);
     var grid = h('div', { className: 'mine-grid' });

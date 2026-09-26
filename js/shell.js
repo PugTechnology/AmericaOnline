@@ -280,6 +280,8 @@
 
   function desktopContextMenu(e) {
     e.preventDefault();
+    // Only the bare desktop gets this menu; windows sit inside the desktop element.
+    if (e.target !== desktopEl && e.target.id !== 'windows-layer') return;
     Menu.popup([
       { label: 'Acti&ve Desktop', items: [{ label: '&View As Web Page', disabled: true }, { label: '&Customize my Desktop...', action: function () { Shell.launch('control', 'display'); } }] },
       '-',

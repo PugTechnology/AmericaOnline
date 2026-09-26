@@ -428,3 +428,6 @@ body.dragging, body.dragging * { cursor: inherit; }
 .progress .chunk { width: 8px; flex: none; background: var(--navy); }
 
 .hidden { display: none !important; }
+
+/* Win98 showed focus with the dotted label outline, not a browser ring. */
+.desk-icon:focus, .icon-view:focus, .icon-view .item:focus, .dos-screen:focus, .mine-grid:focus { outline: none; }

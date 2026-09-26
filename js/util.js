@@ -9,7 +9,12 @@
       for (var k in attrs) {
         var v = attrs[k];
         if (v == null || v === false) continue;
-        if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+        if (k === 'style' && typeof v === 'object') {
+          for (var sk in v) {
+            if (sk.slice(0, 2) === '--') el.style.setProperty(sk, v[sk]);
+            else el.style[sk] = v[sk];
+          }
+        }
         else if (k === 'dataset') Object.assign(el.dataset, v);
         else if (k.slice(0, 2) === 'on' && typeof v === 'function') el.addEventListener(k.slice(2), v);
         else if (k === 'className' || k === 'textContent' || k === 'innerHTML' || k === 'value' || k === 'htmlFor') el[k] = v;
