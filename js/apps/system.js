@@ -198,21 +198,40 @@
       return b;
     }));
     var show = h('input', { type: 'checkbox', checked: true });
-    var win = WM.open({ app: 'welcome', title: 'Welcome to Windows 98', icon: 'windows-flag', width: 540, height: 360, resizable: false, maximizable: false,
+    // Background music: a YouTube embed, shown as a small "Now Playing" player
+    // (YouTube players must stay visible). Muting Windows sounds silences it too.
+    var MUSIC_ID = 'mTf806u38Ng';
+    var musicOn = U.store.get('w98.welcome.music', true) && !(window.Sound && Sound.muted);
+    var musicBox = h('div', { className: 'welcome-music' });
+    var musicToggle = h('input', { type: 'checkbox', checked: musicOn });
+    function setMusic(on) {
+      musicBox.innerHTML = '';
+      if (!on) { musicBox.appendChild(h('div', { className: 'wm-off' }, '\u266a Music is off')); return; }
+      musicBox.appendChild(h('iframe', {
+        src: 'https://www.youtube-nocookie.com/embed/' + MUSIC_ID + '?autoplay=1&loop=1&playlist=' + MUSIC_ID + '&controls=1&modestbranding=1&rel=0',
+        title: 'Welcome music', allow: 'autoplay; encrypted-media', referrerpolicy: 'strict-origin-when-cross-origin'
+      }));
+    }
+    musicToggle.addEventListener('change', function () { U.store.set('w98.welcome.music', musicToggle.checked); setMusic(musicToggle.checked); });
+    setMusic(musicOn);
+    var win = WM.open({ app: 'welcome', title: 'Welcome to Windows 98', icon: 'windows-flag', width: 560, height: 420, resizable: false, maximizable: false, shield: true,
       content: h('div', { className: 'welcome-app' }, [
         h('div', { className: 'welcome-head', innerHTML: '<span>Welcome to </span><b>Windows</b><i>98</i>' }),
         h('div', { className: 'welcome-main' }, [
           h('div', { className: 'welcome-left' }, [h('h3', null, 'CONTENTS'), menu]),
           h('div', { className: 'welcome-right' }, [
             h('p', null, 'Hello, ' + (Shell.user || 'friend') + '.'),
-            h('p', null, 'Welcome to the exciting new world of Windows 98, where your computer and the Internet work together. This is the Compaq Presario you remember: a 233 MHz Pentium with MMX, 32 MB of RAM, a 2.1 GB hard drive and a 56K modem that sings.'),
-            h('p', null, 'To begin, click an item on the left. Or double-click America Online and get connected.')
+            h('p', null, 'Welcome to the exciting new world of Windows 98, where your computer and the Internet work together. This is the Compaq Presario you remember: a 500 MHz AMD K6-2, 32 MB of RAM, a 2.1 GB hard drive and a 56K modem that sings.'),
+            h('p', null, 'To begin, click an item on the left. Or double-click America Online and get connected.'),
+            musicBox
           ])
         ]),
         h('div', { className: 'welcome-foot' }, [h('label', { className: 'check' }, [show, 'Show this screen each time Windows 98 starts.']),
+          h('label', { className: 'check' }, [musicToggle, 'Music']),
           h('button', { className: 'btn', onclick: function () { win.close(); } }, 'Close')])
       ]) });
     show.addEventListener('change', function () { U.store.set('w98.welcomed', !show.checked); });
+    win.on('close', function () { musicBox.innerHTML = ''; });
     return win;
   } });
 
@@ -321,7 +340,7 @@
             h('p', null, h('b', null, 'System:')), h('p', { className: 'ind' }, 'Microsoft Windows 98'), h('p', { className: 'ind' }, '4.10.1998'),
             h('p', null, h('b', null, 'Registered to:')), h('p', { className: 'ind' }, Shell.user || 'Guest'), h('p', { className: 'ind' }, 'COMPAQ'), h('p', { className: 'ind' }, '12398-OEM-0017341-94715'),
             h('p', null, h('b', null, 'Manufactured and supported by:')), h('p', { className: 'ind' }, 'Compaq Computer Corporation'), h('p', { className: 'ind' }, 'Presario'),
-            h('p', null, h('b', null, 'Computer:')), h('p', { className: 'ind' }, 'GenuineIntel'), h('p', { className: 'ind' }, 'Pentium(r) processor with MMX(TM)'), h('p', { className: 'ind' }, '32.0MB RAM')
+            h('p', null, h('b', null, 'Computer:')), h('p', { className: 'ind' }, 'AuthenticAMD'), h('p', { className: 'ind' }, 'AMD-K6(tm)-2 3D processor'), h('p', { className: 'ind' }, '32.0MB RAM')
           ])
         ]) },
         { title: 'Device Manager', content: h('div', { className: 'sunken-panel device-tree' }, [

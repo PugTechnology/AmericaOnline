@@ -72,8 +72,14 @@
     document.body.classList.add('busy');
     var chain = fastBoot() ? quickPost(isRestart) : post(isRestart);
     chain
-      .then(startingWindows)
-      .then(splash)
+      .then(function (r) {
+        // DEL at the POST prompt skips the Windows start-up animation.
+        if (r && r.skipSplash) {
+          setStage(h('div', { className: 'stage', style: { background: '#000' } }));
+          return pause(500);
+        }
+        return startingWindows().then(splash);
+      })
       .then(function () { skipRequested = false; return logon(); })
       .then(desktop)
       .catch(function (e) { console.error(e); desktop(); });
@@ -87,81 +93,140 @@
     return pause(900);
   }
 
+  var AWARD_RIBBON = '<svg class="award-ribbon" viewBox="0 0 40 44"><path d="M9 26 L3 42 L11 37 L15 44 L20 30 Z M31 26 L37 42 L29 37 L25 44 L20 30 Z" fill="#4f7dff"/><circle cx="20" cy="16" r="14" fill="#5b86ff"/><circle cx="20" cy="16" r="9" fill="none" stroke="#9fb8ff" stroke-width="2"/></svg>';
+  var ENERGY_STAR = '<svg class="energy-star" viewBox="0 0 200 120"><g fill="none" stroke="#3dff8a" stroke-width="3"><path d="M18 78 A 82 70 0 0 1 182 70"/></g>' +
+    '<text x="22" y="82" font-family="Brush Script MT, Segoe Script, cursive" font-style="italic" font-size="40" fill="#3dff8a">energy</text>' +
+    '<polygon points="160,38 168,62 193,62 173,76 180,100 160,86 140,100 147,76 127,62 152,62" fill="none" stroke="#3dff8a" stroke-width="3"/>' +
+    '<rect x="10" y="104" width="186" height="2.5" fill="#3dff8a"/><text x="12" y="119" font-family="Arial, sans-serif" font-weight="bold" font-size="13" fill="#3dff8a" textLength="182">EPA POLLUTION PREVENTER</text></svg>';
+
+  // Award Modular BIOS POST, as on a late-90s Compaq Presario. It stops at
+  // "Press F1 to continue, DEL to enter SETUP"; F1 boots normally and DEL
+  // skips the Windows 98 start-up animation. Resolves { skipSplash }.
   function post(isRestart) {
-    var el = setStage(h('div', { id: 'bios', className: 'stage crt' + (isRestart ? '' : ' crt-on') }));
+    var el = setStage(h('div', { id: 'bios', className: 'stage crt award' + (isRestart ? '' : ' crt-on') }));
     if (!isRestart) U.sound('degauss');
+    U.sound('hddSpinUp');
     document.title = 'Compaq Presario';
 
+    var text = h('div', { className: 'post-text' });
+    var bottom = h('div', { className: 'post-bottom' });
+    el.innerHTML = AWARD_RIBBON + ENERGY_STAR;
+    el.appendChild(text);
+    el.appendChild(bottom);
     var lines = [];
-    function render(extra) {
-      el.innerHTML = lines.join('\n') + (extra || '') + '<span class="cursor"></span>';
-    }
+    function render(extra) { text.innerHTML = lines.join('\n') + (extra || ''); }
     function line(html) { lines.push(html); render(); }
+    function setBottom(html) { bottom.innerHTML = html + '\n01/06/2000-VP3-586B-W877-2A5LEF09C-00'; }
 
-    // 1. Compaq's quiet moment: a white block cursor blinking top-right. This is where
-    //    you'd hit F10 for setup.
-    el.innerHTML = '<span class="f10-cursor"></span>';
-    U.sound('hddSpinUp');
-    return pause(isRestart ? 900 : 2200).then(function () {
-      // 2. Compaq logo screen with the classic "F10 = Setup" in the corner.
-      var logo = h('div', { id: 'compaq-logo', className: 'stage' }, [
-        h('div', { className: 'logo', innerHTML: 'COMPAQ' }),
-        h('div', { className: 'presario' }, 'PRESARIO'),
-        h('div', { className: 'f10' }, 'F10 = Setup')
-      ]);
-      el.appendChild(logo);
-      return pause(2400).then(function () { logo.remove(); render(); });
-    }).then(function () {
-      // 3. Text POST.
-      line('<span class="w">COMPAQ Presario System BIOS</span>  Version 4.10  (C) 1982-1998 Compaq Computer Corporation');
+    return pause(isRestart ? 500 : 1100).then(function () {
+      line('    Award Modular BIOS v4.60PGA, An Energy Star Ally');
+      line('    Copyright (C) 1984-98, Award Software, Inc.');
       line('');
-      line('Intel(R) Pentium(R) processor with MMX(TM) technology  233 MHz');
-      render('\nMemory Test :      0K');
+      line('Version J1437');
+      line('');
+      setBottom('Press <b>DEL</b> to enter SETUP');
+      return pause(500);
+    }).then(function () {
+      line('AMD-K6(tm)-2/500 CPU Found');
       var total = 32768, shown = 0;
       return new Promise(function (resolve) {
         var iv = setInterval(function () {
           shown = Math.min(total, shown + (skipRequested ? total : 1024));
-          render('\nMemory Test : ' + String(shown).padStart(6) + 'K');
+          render('\nMemory Test :  ' + String(shown).padStart(6) + 'K');
           if (shown >= total) { clearInterval(iv); resolve(); }
         }, 45);
       });
     }).then(function () {
-      lines.push('Memory Test :  32768K <span class="w">OK</span>');
-      line('512K Pipeline Burst Cache');
+      line('Memory Test :   32768K OK');
       line('');
       return pause(400);
     }).then(function () {
-      line('Detecting IDE Primary Master   ... <span class="w">QUANTUM FIREBALL ST2.1A</span>');
-      U.sound('hddSeek', 300);
-      return pause(700);
-    }).then(function () {
-      line('Detecting IDE Primary Slave    ... None');
-      return pause(350);
-    }).then(function () {
-      line('Detecting IDE Secondary Master ... <span class="w">CD-ROM 24X</span>');
+      line('Award Plug and Play BIOS Extension  v1.0A');
+      line('Copyright (C) 1998, Award Software, Inc.');
       return pause(500);
     }).then(function () {
-      line('Detecting IDE Secondary Slave  ... None');
+      line('   Detecting IDE Primary Master  ... QUANTUM FIREBALL ST2.1A');
+      U.sound('hddSeek', 300);
+      return pause(800);
+    }).then(function () {
+      line('   Detecting IDE Primary Slave   ... None');
+      return pause(450);
+    }).then(function () {
+      line('   Detecting IDE Secondary Master... CD-ROM 24X');
+      return pause(600);
+    }).then(function () {
+      line('   Detecting IDE Secondary Slave ... None');
       line('');
-      line('Floppy Drive A: ... <span class="w">1.44 MB 3&#189;"</span>');
       return Promise.race([U.sound('floppySeek'), pause(1600)]);
     }).then(function () {
-      line('');
-      line('Plug and Play BIOS Extension v1.0A');
-      line('Initializing Plug and Play Cards...');
-      line('  PnP Card #1 : <span class="w">Creative SB16 PnP</span>');
-      line('  PnP Card #2 : <span class="w">U.S. Robotics 56K Voice Modem</span>');
-      return pause(900);
-    }).then(function () {
-      line('');
-      line('Verifying DMI Pool Data ........');
+      line(' Floppy disk(s) fail (40)');
       U.sound('postBeep');
-      return pause(900);
-    }).then(function () {
-      line('Boot from Hard Disk C:');
-      U.sound('hddSeek', 500);
-      return pause(700);
+      document.body.classList.remove('busy');
+      return waitForKey();
+    }).then(function (key) {
+      document.body.classList.add('busy');
+      if (key === 'del') {
+        setBottom('');
+        return { skipSplash: true };
+      }
+      return systemConfig().then(function () { return { skipSplash: false }; });
     });
+
+    // F1 / DEL (keys, or tap the words on a touch screen). Esc means "hurry up": F1.
+    function waitForKey() {
+      setBottom('Press <b class="key" data-k="f1">F1</b> to continue, <b class="key" data-k="del">DEL</b> to enter SETUP');
+      return new Promise(function (resolve) {
+        var done = false;
+        function finish(k) {
+          if (done) return;
+          done = true;
+          document.removeEventListener('keydown', onKey, true);
+          clearInterval(iv);
+          resolve(k);
+        }
+        function onKey(e) {
+          if (e.key === 'F1' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish('f1'); }
+          else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); finish('del'); }
+        }
+        document.addEventListener('keydown', onKey, true);
+        bottom.querySelectorAll('.key').forEach(function (k) {
+          k.addEventListener('click', function () { finish(k.dataset.k); });
+        });
+        var iv = setInterval(function () { if (skipRequested) finish('f1'); }, 100);
+      });
+    }
+
+    // The summary box Award printed before handing over to the operating system.
+    function systemConfig() {
+      text.innerHTML = '';
+      setBottom('');
+      el.querySelectorAll('svg').forEach(function (n) { n.remove(); });
+      var row = function (a, b, c, d) { return '<tr><td>' + a + '</td><td>: ' + b + '</td><td>' + c + '</td><td>: ' + d + '</td></tr>'; };
+      text.innerHTML = '<div class="sysconf"><div class="sc-title">System Configurations</div><table>' +
+        row('CPU Type', 'AMD-K6(tm)-2', 'Base Memory', '640K') +
+        row('Co-Processor', 'Installed', 'Extended Memory', '31744K') +
+        row('CPU Clock', '500MHz', 'Cache Memory', '512K') +
+        '</table><div class="sc-rule"></div><table>' +
+        row('Diskette Drive A', '1.44M, 3.5 in.', 'Display Type', 'EGA/VGA') +
+        row('Diskette Drive B', 'None', 'Serial Port(s)', '3F8 2F8') +
+        row('Pri. Master Disk', 'LBA ,Mode 4, 2111MB', 'Parallel Port(s)', '378') +
+        row('Pri. Slave  Disk', 'None', 'SDRAM at Row(s)', '0 1') +
+        row('Sec. Master Disk', 'CDROM,Mode 4', '', '') +
+        row('Sec. Slave  Disk', 'None', '', '') +
+        '</table></div>\n' +
+        'PCI device listing.....\n' +
+        'Bus No. Device No. Func No. Vendor ID  Device ID  Device Class\n' +
+        '-------------------------------------------------------------------\n' +
+        '   0        7         1      1106       0571      IDE Controller\n' +
+        '   0        9         0      5333       8904      Display Controller\n' +
+        '   0       11         0      12B9       1008      Simple COMM. Controller\n' +
+        '   0       13         0      1102       0002      Multimedia Device\n';
+      U.sound('hddSeek', 600);
+      return pause(2600).then(function () {
+        text.innerHTML += 'Verifying DMI Pool Data ........\n';
+        return pause(900);
+      });
+    }
   }
 
   function startingWindows() {
@@ -203,11 +268,11 @@
     for (var y = 0; y < H; y++) {
       for (var x = 0; x < W; x++) {
         var t = y / H;
-        // deep blue at the top, lighter toward the horizon
-        var sr = 40 + 70 * t, sg = 95 + 80 * t, sb = 200 + 45 * t;
-        var n = fbm(x / 70, y / 38 + 3.1);
-        var cloud = Math.max(0, Math.min(1, (n - 0.47) * 3.2));
-        var shade = 0.78 + 0.22 * Math.min(1, (fbm(x / 30 + 9, y / 18) - 0.2));
+        // pale powder-blue sky, mostly covered in soft cloud
+        var sr = 128 + 30 * t, sg = 170 + 25 * t, sb = 214 + 15 * t;
+        var n = fbm(x / 80, y / 50 + 3.1);
+        var cloud = Math.max(0, Math.min(1, (n - 0.36) * 2.4));
+        var shade = 0.86 + 0.14 * Math.min(1, (fbm(x / 30 + 9, y / 18) - 0.2));
         var cr = 255 * shade, cg = 255 * shade, cb = 255 * Math.min(1, shade + 0.06);
         var k = (y * W + x) * 4;
         d[k] = sr + (cr - sr) * cloud;
@@ -221,43 +286,54 @@
     return c;
   }
 
-  // The four-pane waving flag, drawn as warped quads.
+  // The Windows 98 flag: four panes in a thick black waving frame, trailing a
+  // trail of squares that dissolve to the left.
   function flagSvg() {
     function warp(u, v) {
-      var x = 18 + u * 100 + v * 6;
-      var y = 8 + v * 92 - 12 * Math.sin(u * Math.PI) + 4 * Math.sin(u * Math.PI * 2) * (1 - v);
-      return [x.toFixed(2), y.toFixed(2)];
+      var x = 60 + u * 118 + v * 14 - 10 * Math.sin(v * Math.PI);
+      var y = 40 + v * 130 - u * 26 - 16 * Math.sin(u * Math.PI);
+      return [x, y];
     }
-    function pane(u0, u1, v0, v1) {
-      var pts = [], i, s = 12;
-      for (i = 0; i <= s; i++) pts.push(warp(u0 + (u1 - u0) * i / s, v0));
-      for (i = 0; i <= s; i++) pts.push(warp(u1, v0 + (v1 - v0) * i / s));
-      for (i = s; i >= 0; i--) pts.push(warp(u0 + (u1 - u0) * i / s, v1));
-      for (i = s; i >= 0; i--) pts.push(warp(u0, v0 + (v1 - v0) * i / s));
-      return 'M' + pts.map(function (p) { return p.join(','); }).join('L') + 'Z';
+    function quad(u0, u1, v0, v1) {
+      var pts = [], i, n = 14;
+      for (i = 0; i <= n; i++) pts.push(warp(u0 + (u1 - u0) * i / n, v0));
+      for (i = 0; i <= n; i++) pts.push(warp(u1, v0 + (v1 - v0) * i / n));
+      for (i = n; i >= 0; i--) pts.push(warp(u0 + (u1 - u0) * i / n, v1));
+      for (i = n; i >= 0; i--) pts.push(warp(u0, v0 + (v1 - v0) * i / n));
+      return 'M' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join('L') + 'Z';
     }
-    var g = 0.035;
-    var panes = [
-      ['#f0461e', 0, 0.5 - g, 0, 0.5 - g], ['#43b02a', 0.5 + g, 1, 0, 0.5 - g],
-      ['#1d6fe0', 0, 0.5 - g, 0.5 + g, 1], ['#ffc81e', 0.5 + g, 1, 0.5 + g, 1]
-    ];
-    var trail = '';
-    // Trailing "pixels" to the left of each half of the flag.
-    [[0.1, '#f0461e'], [0.3, '#f0461e'], [0.62, '#1d6fe0'], [0.82, '#1d6fe0']].forEach(function (r, ri) {
-      for (var i = 0; i < 4; i++) {
-        var size = 7 - i * 1.3, x = 10 - i * 9, y = 10 + r[0] * 90 + (ri % 2) * 2;
-        trail += '<rect x="' + (x - size / 2).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + size.toFixed(1) + '" height="' + size.toFixed(1) + '" fill="' + r[1] + '" opacity="' + (1 - i * 0.2) + '"/>';
+    var out = '<defs>' +
+      '<linearGradient id="fr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a3a3a"/><stop offset=".5" stop-color="#050505"/><stop offset="1" stop-color="#2a2a2a"/></linearGradient>' +
+      '<linearGradient id="pr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a1f"/><stop offset="1" stop-color="#e2400c"/></linearGradient>' +
+      '<linearGradient id="pg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ed24f"/><stop offset="1" stop-color="#5aa832"/></linearGradient>' +
+      '<linearGradient id="pb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b8ad6"/><stop offset="1" stop-color="#2d5aa8"/></linearGradient>' +
+      '<linearGradient id="py" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff04a"/><stop offset="1" stop-color="#f2c80f"/></linearGradient>' +
+      '</defs>';
+    // Trail: rows of squares following the wave, black near the flag, coloured further out.
+    var rows = 8, colors = ['#555', '#ee5a17', '#ee5a17', '#5a5a5a', '#2f6fd0', '#2f6fd0', '#555', '#333'];
+    for (var c = 1; c <= 7; c++) {
+      for (var r = 0; r < rows; r++) {
+        if (c >= 5 && (r + c) % 3 === 0) continue;
+        if (c === 7 && r % 2) continue;
+        var size = 0.085 - c * 0.006, gap = 0.135;
+        var u0 = -0.03 - c * gap, v0 = (r + 0.5) / rows - size * 0.6;
+        var fill = c <= 2 ? '#141414' : colors[r];
+        out += '<path d="' + quad(u0, u0 + size, v0, v0 + size * 1.2) + '" fill="' + fill + '"/>';
       }
+    }
+    out += '<path d="' + quad(-0.06, 1.06, -0.06, 1.06) + '" fill="url(#fr)" stroke="#000" stroke-width="1.5"/>';
+    var g = 0.045;
+    [['pr', 0.03, 0.5 - g, 0.03, 0.5 - g], ['pg', 0.5 + g, 0.97, 0.03, 0.5 - g], ['pb', 0.03, 0.5 - g, 0.5 + g, 0.97], ['py', 0.5 + g, 0.97, 0.5 + g, 0.97]].forEach(function (p) {
+      out += '<path d="' + quad(p[1], p[2], p[3], p[4]) + '" fill="url(#' + p[0] + ')"/>';
     });
-    return '<svg class="flag" viewBox="-30 -10 160 125" xmlns="http://www.w3.org/2000/svg">' + trail +
-      panes.map(function (p) { return '<path d="' + pane(p[1], p[2], p[3], p[4]) + '" fill="' + p[0] + '" stroke="rgba(0,0,0,.25)" stroke-width="0.8"/>'; }).join('') +
-      '</svg>';
+    return '<svg class="flag" viewBox="-60 -10 270 210" xmlns="http://www.w3.org/2000/svg">' + out + '</svg>';
   }
 
   function splashStage(footer) {
     var el = h('div', { className: 'stage w98-splash' }, [
       skyCanvas(),
-      h('div', { className: 'logo', innerHTML: flagSvg() + '<div class="words"><div class="ms">Microsoft<sup>&reg;</sup></div><div class="win">Windows<sup>&reg;</sup><span class="num">98</span></div></div>' }),
+      h('div', { className: 'logo', innerHTML: flagSvg() +
+        '<div class="words"><div class="ms">Microsoft<sup>&reg;</sup></div><div class="win"><b>Windows</b><sup>&reg;</sup><span class="num">98</span></div></div>' }),
       footer ? h('div', { className: 'footer' }, footer) : null,
       footer ? null : h('div', { className: 'bar' })
     ]);

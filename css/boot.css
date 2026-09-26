@@ -90,36 +90,41 @@
 #bios .g { color: #5f5; }
 #bios .cursor { display: inline-block; width: 1ch; height: .18em; background: #aaa; vertical-align: baseline; animation: blink 0.5s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-#bios .f10-cursor { position: absolute; right: 1ch; top: 0.25em; width: 1ch; height: 0.9em; background: #fff; animation: blink 0.53s steps(1) infinite; }
 #bios .energy { position: absolute; right: 2ch; top: 0.6em; text-align: center; line-height: 1; }
 #bios .corner { position: absolute; right: 1ch; bottom: 0; }
 
-/* Compaq logo screen */
-#compaq-logo {
-  display: flex; align-items: center; justify-content: center; flex-direction: column;
-  background: #fff;
-}
-#compaq-logo .logo { font: 900 italic calc(min(15vw, 22vh))/1 Arial, Helvetica, sans-serif; color: #d71920; letter-spacing: -0.02em; transform: skewX(-4deg); }
-#compaq-logo .logo span { position: relative; }
-#compaq-logo .presario { margin-top: 2vh; font: bold calc(min(4vw, 6vh)) Arial, Helvetica, sans-serif; color: #2b2b2b; letter-spacing: 0.35em; }
-#compaq-logo .f10 { position: absolute; right: 2ch; bottom: 1.2em; font: calc(min(2.2vw, 3.4vh)) "VT323", monospace; color: #000; }
+
+/* ---------- Award BIOS ---------- */
+#bios.award { color: #7f9dff; background: #05060c; font-weight: bold; text-shadow: 0 0 3px rgba(110,140,255,.55); }
+#bios.award .post-text { position: relative; padding-top: 0.2em; }
+#bios.award .award-ribbon { position: absolute; left: 0.6ch; top: 0.2em; width: 3.4ch; height: 2.1em; }
+#bios.award .energy-star { position: absolute; right: 1ch; top: 1.4em; width: 22ch; height: auto; }
+#bios.award .post-bottom { position: absolute; left: 3ch; bottom: 0.6em; }
+#bios.award .post-bottom b { color: #ffffff; font-weight: normal; }
+#bios.award .post-bottom .key { cursor: pointer; text-decoration: none; }
+#bios.award .post-bottom .key:hover { text-decoration: underline; }
+#bios.award .sysconf { border: 0.2em double #7f9dff; padding: 0.2em 1ch 0.4em; margin: 0.4em 0 0.6em; white-space: normal; }
+#bios.award .sc-title { text-align: center; margin: -0.85em auto 0.2em; width: max-content; padding: 0 1ch; background: #05060c; }
+#bios.award .sysconf table { border-collapse: collapse; width: 100%; font: inherit; color: inherit; }
+#bios.award .sysconf td { padding: 0 0.5ch; white-space: pre; line-height: inherit; }
+#bios.award .sc-rule { border-top: 0.12em solid #7f9dff; margin: 0.1em 0; }
 
 /* ---------- Windows 98 splash ---------- */
-.w98-splash { background: #2c64c8; overflow: hidden; }
+.w98-splash { background: #a9c8e8; overflow: hidden; }
 .w98-splash canvas.sky { position: absolute; inset: 0; width: 100%; height: 100%; }
 .w98-splash .logo {
-  position: absolute; left: 50%; top: 47%; transform: translate(-50%, -50%);
-  display: flex; align-items: center; gap: 1.2vw;
-  font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
   -webkit-font-smoothing: antialiased;
 }
-.w98-splash .flag { width: calc(min(23vw, 32vh)); height: auto; margin-right: -1.5vw; filter: drop-shadow(0.3vw 0.4vw 0.3vw rgba(0,0,40,.35)); }
-.w98-splash .words { display: flex; flex-direction: column; color: #000; line-height: 0.9; }
-.w98-splash .ms { font: bold calc(min(2.4vw, 3.4vh)) Arial, Helvetica, sans-serif; letter-spacing: 0.02em; padding-left: 0.2em; }
-.w98-splash .ms sup, .w98-splash .win sup { font-size: 0.28em; vertical-align: top; position: relative; top: 0.3em; font-weight: normal; }
-.w98-splash .win { font: bold calc(min(10vw, 14vh)) "Franklin Gothic Medium", "Arial", sans-serif; letter-spacing: -0.03em; display: flex; align-items: flex-start; }
-.w98-splash .win .num { font-size: 0.62em; margin-left: 0.04em; color: #000; font-style: normal; }
-.w98-splash .footer { position: absolute; left: 0; right: 0; bottom: 5vh; text-align: center; font: bold 2.2vh Arial, sans-serif; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,.5); }
+.w98-splash .flag { width: calc(min(44vw, 58vh)); height: auto; margin-bottom: -2vh; filter: drop-shadow(0.4vh 0.6vh 0.6vh rgba(0,0,40,.25)); }
+.w98-splash .words { display: flex; flex-direction: column; color: #000; line-height: 0.95; margin-left: -4vh; }
+.w98-splash .ms { font: bold calc(min(3.4vw, 5vh)) Arial, Helvetica, sans-serif; letter-spacing: -0.01em; }
+.w98-splash sup { font-size: 0.32em; vertical-align: top; position: relative; top: 0.35em; font-weight: normal; }
+.w98-splash .win { display: flex; align-items: flex-start; font-size: calc(min(8.6vw, 12.5vh)); }
+.w98-splash .win b { font: 900 1em/1 "Arial Black", "Franklin Gothic Heavy", Arial, sans-serif; letter-spacing: -0.035em; }
+.w98-splash .win .num { font: 400 1em/1 Arial, Helvetica, sans-serif; letter-spacing: -0.02em; margin-left: 0.02em; }
+.w98-splash .footer { position: absolute; left: 0; right: 0; bottom: 5vh; text-align: center; font: bold 2.4vh Arial, sans-serif; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,.6); }
 .w98-splash .bar {
   position: absolute; left: 0; right: 0; bottom: 0; height: 1.6vh; min-height: 8px;
   background: linear-gradient(90deg, #13307e, #3ea6e5, #ffffff, #3ea6e5, #13307e, #3ea6e5, #ffffff, #3ea6e5, #13307e);
