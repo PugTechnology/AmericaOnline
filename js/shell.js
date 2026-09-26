@@ -566,6 +566,25 @@
       if ((e.key === 'Meta' || e.key === 'OS') && metaAlone && Shell.ready()) toggleStart();
       metaAlone = false;
     });
+    startIdleWatch();
+  }
+
+  // Screen saver: starts after the chosen number of idle minutes on the desktop.
+  // Time spent inside an iframe (DOOM, the web, the Welcome music player) counts
+  // as activity, since those keystrokes never reach this page.
+  Shell.screensaverSettings = function () { return U.store.get('w98.screensaver', { name: '3D Pipes', wait: 3 }); };
+  function startIdleWatch() {
+    var last = Date.now();
+    function poke() { last = Date.now(); }
+    ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (t) { document.addEventListener(t, poke, true); });
+    setInterval(function () {
+      var a = document.activeElement;
+      if (a && a.tagName === 'IFRAME') { poke(); return; }
+      if (!window.Screensaver || Screensaver.running || !Shell.ready() || document.hidden) return;
+      var s = Shell.screensaverSettings();
+      if (!s.name || s.name === '(None)') return;
+      if (Date.now() - last > s.wait * 60000) { Screensaver.start(s.name, { onStop: poke }); poke(); }
+    }, 5000);
   }
 
   // True once someone has logged on and the desktop is live.

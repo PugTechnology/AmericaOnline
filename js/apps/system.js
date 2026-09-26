@@ -298,12 +298,34 @@
       colSel.addEventListener('change', function () { pending.color = colSel.value; paint(); win.changed(); });
       var fast = h('input', { type: 'checkbox', checked: U.store.get('w98.fastboot', false) });
       fast.addEventListener('change', function () { win.changed(); });
+      var ss = Object.assign({}, Shell.screensaverSettings()), ssPreview = null;
+      function screenSaverTab() {
+        var names = ['(None)'].concat(window.Screensaver ? Screensaver.names.filter(function (n) { return n !== '(None)'; }) : []);
+        var mon = h('div', { className: 'monitor-preview' }, h('div', { className: 'screen ss-screen' }));
+        var sel = h('select', { className: 'field' }, names.map(function (n) { return h('option', { selected: n === ss.name }, n); }));
+        var wait = h('input', { type: 'number', className: 'field', min: 1, max: 60, value: ss.wait, style: { width: '50px' } });
+        var prev = h('button', { className: 'btn', disabled: ss.name === '(None)' }, U.label('Pre&view'));
+        function showPreview() {
+          if (ssPreview) { ssPreview.stop(); ssPreview = null; }
+          var scr = mon.firstChild;
+          scr.innerHTML = '';
+          scr.style.background = ss.name === '(None)' ? '' : '#000';
+          if (window.Screensaver && ss.name !== '(None)') ssPreview = Screensaver.preview(scr, ss.name);
+        }
+        sel.addEventListener('change', function () { ss.name = sel.value; prev.disabled = ss.name === '(None)'; showPreview(); win.changed(); });
+        wait.addEventListener('change', function () { ss.wait = Math.max(1, Math.min(60, +wait.value || 3)); win.changed(); });
+        prev.addEventListener('click', function () { if (window.Screensaver && ss.name !== '(None)') setTimeout(function () { Screensaver.start(ss.name); }, 300); });
+        setTimeout(showPreview, 0);
+        return [mon, h('fieldset', { className: 'group' }, [h('legend', null, 'Screen Saver'),
+          h('div', { className: 'ss-row' }, [sel, prev]),
+          h('div', { className: 'ss-row' }, [h('span', null, 'Wait:'), wait, h('span', null, 'minutes')])])];
+      }
       var win = propSheet('Display Properties', 'display', [
         { title: 'Background', content: [preview, h('div', { className: 'display-row' }, [
           h('div', null, [h('div', null, U.label('&Pattern:')), patList]),
           h('div', null, [h('div', null, U.label('&Color:')), colSel])
         ])] },
-        { title: 'Screen Saver', content: [h('p', null, 'Screen savers were for protecting CRTs from burn-in. Your browser does not have that problem.'), h('p', null, 'Screen Saver: (None)')] },
+        { title: 'Screen Saver', content: screenSaverTab() },
         { title: 'Settings', content: [
           h('p', null, 'Display: Compaq MV500 on S3 Trio64V2/DX'),
           h('p', null, 'Colors: True Color (24 bit)   Screen area: ' + window.innerWidth + ' by ' + window.innerHeight + ' pixels'),
@@ -312,10 +334,12 @@
         ] }
       ], function () {
         U.store.set('w98.display', pending);
+        U.store.set('w98.screensaver', ss);
         U.store.set('w98.fastboot', fast.checked);
         Shell.applyDesktopStyle();
       });
       paint();
+      win.on('close', function () { if (ssPreview) ssPreview.stop(); });
       return win;
     },
     sounds: function () {
