@@ -32,7 +32,7 @@
       return [
         { name: '3\u00bd Floppy (A:)', icon: 'drive-floppy', kind: 'drive', desc: '3\u00bd Inch Floppy Disk', open: function () { driveNotReady('A', win); } },
         { name: 'Presario (C:)', icon: 'drive-hdd', kind: 'drive', drive: true, desc: 'Local Disk', open: function () { nav('C:\\'); } },
-        { name: '(D:)', icon: 'drive-cd', kind: 'drive', desc: 'CD-ROM Disc', open: function () { driveNotReady('D', win); } },
+        { name: 'AOL 4.0 CD (D:)', icon: 'drive-cd', kind: 'drive', desc: 'CD-ROM Disc', open: function () { Shell.launch('aolcd'); } },
         { name: 'Printers', icon: 'printers', kind: 'sys', desc: 'Use the Printers folder to add, remove, and change settings for printers.', open: function () { nav('Printers'); } },
         { name: 'Control Panel', icon: 'control-panel', kind: 'sys', desc: 'Use the settings in Control Panel to personalize your computer.', open: function () { nav('Control Panel'); } },
         { name: 'Dial-Up Networking', icon: 'network', kind: 'sys', desc: 'Connects to other computers by using a modem.', open: function () { nav('Dial-Up Networking'); } },

@@ -953,6 +953,67 @@
     }
   }
 
+  // ---- AOL voice clips (drop-in files, with fallbacks) ------------------------
+  // Sound.clip('welcome', 'Welcome!') looks for sounds/aol/welcome.mp3, .wav, .ogg.
+  // No file? It falls back to a synth sound (im, buddy-in, buddy-out) or to speech.
+  var CLIP_DIR = 'sounds/aol/';
+  var CLIP_EXTS = ['mp3', 'wav', 'ogg'];
+  var CLIP_SYNTH = { 'im': 'imReceive', 'buddy-in': 'doorOpen', 'buddy-out': 'doorClose' };
+  var clipBufs = {};             // name -> AudioBuffer, or false once every extension failed
+  var clipLoads = {};            // name -> in-flight load promise
+
+  function fetchClip(url) {
+    return global.fetch(url).then(function (r) {
+      if (!r.ok) throw new Error('missing');
+      return r.arrayBuffer();
+    }).then(function (ab) {
+      return new Promise(function (res, rej) {
+        var p = ctx.decodeAudioData(ab, res, rej);   // callbacks for old Safari
+        if (p && p.then) p.then(res, rej);
+      });
+    });
+  }
+  // Resolves with the decoded buffer, or null. Failures are remembered.
+  function loadClip(name) {
+    if (clipBufs[name] !== undefined) return Promise.resolve(clipBufs[name] || null);
+    if (!ctx || !global.fetch) return Promise.resolve(null);   // not unlocked yet: try again later
+    if (clipLoads[name]) return clipLoads[name];
+    var i = 0;
+    function next() {
+      if (i >= CLIP_EXTS.length) { clipBufs[name] = false; return null; }
+      return fetchClip(CLIP_DIR + name + '.' + CLIP_EXTS[i++]).then(function (b) { clipBufs[name] = b; return b; }, next);
+    }
+    clipLoads[name] = Promise.resolve().then(next).then(function (b) { delete clipLoads[name]; return b; }, function () { delete clipLoads[name]; return null; });
+    return clipLoads[name];
+  }
+  function playClip(buf) {
+    return new Promise(function (res) {
+      try {
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(master);
+        src.onended = res;
+        src.start();
+        setTimeout(res, buf.duration * 1000 + 500);
+      } catch (e) { res(); }
+    });
+  }
+  function clip(name, fallbackText) {
+    try {
+      return loadClip(name).then(function (buf) {
+        if (buf) return playClip(buf);
+        if (CLIP_SYNTH[name]) return call(CLIP_SYNTH[name]);
+        return speak(fallbackText);
+      }).catch(noop);
+    } catch (e) {
+      return Promise.resolve();
+    }
+  }
+  // Quietly fetch clips ahead of time (no sound, no errors).
+  function preloadClips(names) {
+    (names || ['welcome', 'youve-got-mail', 'goodbye', 'files-done', 'im', 'buddy-in', 'buddy-out']).forEach(function (n) { loadClip(n).catch(noop); });
+  }
+
   var Sound = {
     unlock: function () {
       try {
@@ -1069,6 +1130,8 @@
     busy: function (cycles) { return call('busy', cycles == null ? 4 : cycles); },
     modemSpeakerOff: function () { return call('modemSpeakerOff'); },
     speak: function (text, opts) { return speak(text, opts); },
+    clip: clip,
+    preloadClips: preloadClips,
     DIALUP_TIMELINE: DIALUP_TIMELINE,
     DIALUP_TIMELINE_BUSY: DIALUP_TIMELINE_BUSY,
     dialup: function (opts) {
