@@ -56,7 +56,7 @@
             'README.TXT': file('America Online for Windows 95/98, version 4.0\r\n\r\nTo sign on, double-click the America Online icon on your desktop,\r\nselect your screen name and click SIGN ON. First time? Choose "Guest"\r\nor "New User".\r\n\r\nUse Keywords to get around: press Ctrl+K or type a word into the\r\nkeyword box on the navigation bar and click Go.\r\n')
           }),
           'Internet Explorer': dir({ 'IEXPLORE.EXE': bin(72976, { app: 'ie' }) }),
-          'Accessories': dir({ 'WORDPAD.EXE': bin(204800) })
+          'Accessories': dir({ 'WORDPAD.EXE': bin(204800, { app: 'wordpad' }) })
         }),
         'DOOM': dir({
           'DOOM.EXE': bin(715493, { app: 'doom' }),
@@ -219,14 +219,14 @@
       return n.d;
     },
 
-    write: function (path, text) {
+    write: function (path, text, extra) {
       var parent = parentOf(path), name = basename(path);
       if (!validName(name)) throw new Error('BADNAME');
       var k = childKey(parent, name);
       if (k !== null && parent.c[k].t === 'd') throw new Error('ISDIR');
       if (k !== null && parent.c[k].sys) throw new Error('READONLY');
       var key = k !== null ? k : name;
-      parent.c[key] = file(text);
+      parent.c[key] = file(text, extra);
       parent.c[key].m = now();
       parent.m = now();
       changed(join(dirname(path), key));

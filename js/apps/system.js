@@ -297,6 +297,9 @@
       var colSel = h('select', { className: 'field' }, COLORS.map(function (c) { return h('option', { value: c[1], selected: c[1] === s.color }, c[0]); }));
       patList.addEventListener('change', function () { pending.pattern = patList.value; paint(); win.changed(); });
       colSel.addEventListener('change', function () { pending.color = colSel.value; paint(); win.changed(); });
+      var wpOld = U.store.get('w98.wallpaper', null);
+      var wpSel = h('select', { className: 'field' }, [h('option', { selected: !wpOld }, '(None)'), wpOld ? h('option', { selected: true }, 'Paint wallpaper') : null]);
+      wpSel.addEventListener('change', function () { win.changed(); });
       var fast = h('input', { type: 'checkbox', checked: U.store.get('w98.fastboot', false) });
       fast.addEventListener('change', function () { win.changed(); });
       var ss = Object.assign({}, Shell.screensaverSettings()), ssPreview = null;
@@ -324,7 +327,8 @@
       var win = propSheet('Display Properties', 'display', [
         { title: 'Background', content: [preview, h('div', { className: 'display-row' }, [
           h('div', null, [h('div', null, U.label('&Pattern:')), patList]),
-          h('div', null, [h('div', null, U.label('&Color:')), colSel])
+          h('div', null, [h('div', null, U.label('&Color:')), colSel]),
+          h('div', null, [h('div', null, U.label('&Wallpaper:')), wpSel])
         ])] },
         { title: 'Screen Saver', content: screenSaverTab() },
         { title: 'Settings', content: [
@@ -335,6 +339,7 @@
         ] }
       ], function () {
         U.store.set('w98.display', pending);
+        if (wpOld && wpSel.value === '(None)') Shell.setWallpaper(null);
         U.store.set('w98.screensaver', ss);
         U.store.set('w98.fastboot', fast.checked);
         Shell.applyDesktopStyle();

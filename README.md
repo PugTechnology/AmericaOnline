@@ -25,6 +25,11 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 - Right-click menus, keyboard shortcuts (Alt+F4, Ctrl+Esc, Alt+letter), and desktop icons you can drag, rename and delete.
 - **Drive C:** lives in `localStorage`. Anything you save survives a reload, and the Recycle Bin actually works.
 - **Notepad:** New, Open, Save and Save As through the classic common dialogs, plus Find, Time/Date and Word Wrap. It asks before throwing away unsaved changes.
+- **Calculator:** Standard and Scientific views, memory keys, keyboard input and Copy/Paste. Standard mode works left to right like the real one, so 2+3*4= is 20, and pressing = again repeats the last operation. Scientific adds precedence, Hex/Dec/Oct/Bin, trig, x^y and n!.
+- **Paint:** pencil, brush, airbrush, eraser, fill, line, rectangle, ellipse, text, colour picker and a movable rectangle selection, with the 28-colour palette (left click for the foreground, right click for the background). Image menu: Flip/Rotate, Invert Colors, Attributes, Clear Image. Pictures save to C: as `.bmp` files (a PNG inside), and File > Set As Wallpaper (Tiled or Centered) puts one on the desktop.
+- **WordPad:** rich text with a toolbar and format bar (font, size, colour, bold, italic, underline, alignment, bullets). It saves `.doc` and `.rtf` files as HTML, opens `.txt`, and cleans anything it loads of scripts and unsafe markup. Double-clicking a `.doc`, `.rtf` or `.wri` opens it; `.bmp` opens Paint.
+- **CD Player:** an LED display, play, pause, stop, previous and next, skip, eject, random and continuous play. The "Compaq Presario Demo CD" holds five chiptune tracks synthesized on the fly.
+- **Volume control:** click the tray speaker for a volume slider and Mute checkbox (double-click for the full Volume Control window). It drives the same master volume and mute the rest of the sound uses.
 - **My Computer and Explorer:** folders on C:, the Web View pane with the disk-usage pie, Recycle Bin, Control Panel, Printers and Network Neighborhood. Drive A: gives "The device is not ready", floppy grind included.
 - **MS-DOS Prompt:** `DIR`, `CD`, `TYPE`, `COPY`, `REN`, `DEL`, `MD`, `MEM`, `VER`, and the classic *Abort, Retry, Fail?*
 - **Minesweeper:** Beginner, Intermediate and Expert, with flags, ? marks, chording and best times.
@@ -66,6 +71,7 @@ index.html            the page; loads everything below in order
 css/win98.css         Windows 98 chrome: bevels, windows, menus, taskbar, desktop
 css/boot.css          power screen, BIOS, splash, logon, shutdown
 css/apps.css          per-app styles
+css/accessories.css   Calculator, Paint, WordPad, CD Player, volume popup
 css/aol.css           America Online
 js/util.js            DOM helpers and storage wrapper
 js/icons.js           pixel-art icon library, drawn procedurally to canvas
@@ -76,7 +82,7 @@ js/shell.js           desktop icons, taskbar, Start menu, program registry
 js/dialogs.js         Open / Save As common dialog
 js/web.js             Wayback Machine browser panes
 js/boot.js            the power-on to desktop sequence (and back)
-js/apps/*.js          Notepad, Explorer, MS-DOS, Minesweeper, DOOM, IE, AOL, system dialogs
+js/apps/*.js          Notepad, Calculator, Paint, WordPad, CD Player, Explorer, MS-DOS, Minesweeper, DOOM, IE, AOL, system dialogs
 apps/doom/            DOOM host page, engine (WASM) and shareware IWAD
 fonts/                MS Sans Serif pixel font and VT323, with their licenses
 ```
