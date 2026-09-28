@@ -589,6 +589,37 @@
       g.disc(10, 8, 2.5, L, K); g.px(9, 7, W);
     }
   };
+  // Solitaire: a blue-backed card behind an ace of hearts.
+  var HEART7 = ['.RR.RR.', 'RRRRRRR', 'RRRRRRR', '.RRRRR.', '..RRR..', '...R...'];
+  I.solitaire = {
+    32: function (g) {
+      g.box(3, 6, 17, 23, B, K); g.frame(5, 8, 13, 19, W); g.frame(6, 9, 11, 17, C);
+      g.box(11, 3, 18, 25, W, K);
+      g.text(14, 6, 'A', R); g.map(15, 13, HEART7, null, 1); g.map(16, 20, HEART7, null, 1);
+    },
+    16: function (g) {
+      g.box(0, 3, 9, 12, B, K); g.frame(1, 4, 7, 10, W);
+      g.box(5, 1, 10, 13, W, K); g.map(7, 4, HEART7, null, 1);
+    }
+  };
+  // FreeCell: the king on green felt.
+  I.freecell = {
+    32: function (g) {
+      g.box(2, 2, 28, 28, G, K);
+      g.poly([[9, 11], [9, 5], [13, 8], [16, 4], [19, 8], [23, 5], [23, 11]], Y, K);
+      g.px(16, 7, R);
+      g.ellipse(16, 16, 6.5, 6, '#f8c8a0', K);
+      g.px(13, 14, K); g.px(19, 14, K); g.px(14, 14, W); g.px(18, 14, W);
+      g.poly([[10, 19], [22, 19], [20, 26], [16, 28], [12, 26]], '#a05010', K);
+      g.hl(14, 18, 21, R);
+    },
+    16: function (g) {
+      g.box(0, 0, 16, 16, G, K);
+      g.poly([[3, 5], [3, 2], [6, 4], [8, 1], [10, 4], [13, 2], [13, 5]], Y, K);
+      g.rect(5, 6, 6, 5, '#f8c8a0'); g.px(6, 7, K); g.px(9, 7, K);
+      g.rect(5, 11, 6, 3, '#a05010'); g.px(7, 12, R); g.px(8, 12, R);
+    }
+  };
   I.mine = {
     32: function (g) { g.map(3, 3, MINE13, null, 2); },
     16: function (g) { g.map(1, 1, MINE13); }
