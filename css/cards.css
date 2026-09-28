@@ -1,0 +1,38 @@
+/* Solitaire and FreeCell: green felt, cards, empty-pile outlines, dialogs. */
+.cards-win .window-body { flex: none; }
+.card-board {
+  position: relative; overflow: hidden; background: #008000; touch-action: none; user-select: none;
+  box-shadow: inset 1px 1px var(--shadow), inset -1px -1px var(--hilight);
+}
+.card-board .card {
+  position: absolute; width: 71px; height: 96px; background: no-repeat 0 0 / 71px 96px;
+  image-rendering: pixelated; touch-action: none; cursor: default;
+}
+.card-board .card.sel::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 128, 0.55); border-radius: 4px; }
+.card-board .slot {
+  position: absolute; width: 71px; height: 96px; box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 4px; background: rgba(0, 0, 0, 0.08);
+}
+.sol-board .slot.stock.empty-ok::after, .sol-board .slot.stock.empty-no::after {
+  content: ''; position: absolute; left: 20px; top: 30px; width: 28px; height: 28px; box-sizing: border-box;
+  border: 5px solid #40c040; border-radius: 50%;
+}
+.sol-board .slot.stock.empty-no::after { border-color: #206020; }
+.sol-board .slot.stock.empty-no::before {
+  content: ''; position: absolute; left: 12px; top: 44px; width: 46px; height: 5px; background: #206020; transform: rotate(-45deg);
+}
+.card-board .win-canvas { position: absolute; left: 0; top: 0; z-index: 5000; cursor: default; }
+.fc-king { position: absolute; z-index: 1; }
+
+.cards-dlg { padding: 12px 14px 0; }
+.cards-dlg p { margin: 0 0 8px; }
+.cards-cols { display: flex; gap: 8px; margin-bottom: 8px; }
+.cards-cols fieldset.group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.cards-dlg label.check { display: flex; margin-top: 4px; }
+.deck-grid { display: grid; grid-template-columns: repeat(4, 75px); gap: 6px 8px; justify-content: center; }
+.deck-cell { padding: 3px; border: 1px solid transparent; line-height: 0; }
+.deck-cell.sel { background: #000080; border-color: #000; }
+.deck-cell img { image-rendering: pixelated; }
+.fc-stats { border-collapse: collapse; width: 100%; }
+.fc-stats td { padding: 2px 4px; }
+.fc-stats td.num { text-align: right; font-weight: bold; }

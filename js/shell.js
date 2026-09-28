@@ -447,6 +447,8 @@
       { label: 'Accessories', icon: 'programs', items: [
         { label: 'Games', icon: 'programs', items: [
           { label: 'Minesweeper', icon: 'minesweeper', action: function () { Shell.launch('minesweeper'); } },
+          { label: 'FreeCell', icon: 'freecell', action: function () { Shell.launch('freecell'); } },
+          { label: 'Solitaire', icon: 'solitaire', action: function () { Shell.launch('solitaire'); } },
           { label: '3D Pinball', icon: 'pinball', action: function () { Shell.launch('pinball'); } }
         ] },
         { label: 'System Tools', icon: 'programs', items: [

@@ -28,6 +28,8 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 - **My Computer and Explorer:** folders on C:, the Web View pane with the disk-usage pie, Recycle Bin, Control Panel, Printers and Network Neighborhood. Drive A: gives "The device is not ready", floppy grind included.
 - **MS-DOS Prompt:** `DIR`, `CD`, `TYPE`, `COPY`, `REN`, `DEL`, `MD`, `MEM`, `VER`, and the classic *Abort, Retry, Fail?*
 - **Minesweeper:** Beginner, Intermediate and Expert, with flags, ? marks, chording and best times.
+- **Solitaire:** Klondike with Draw One / Draw Three, Standard / Vegas / None scoring, a timer, Undo, twelve card backs, drag-and-drop or double-click to the foundations, and the bouncing-cards win animation.
+- **FreeCell:** the classic numbered deals (game 11982 is the unsolvable one), free cells, home cells, supermoves, Select Game, Statistics and a king who watches the mouse.
 - **3D Pinball:** an original space-cadet-style table with flippers, plunger, bumpers, ramp, hyperspace, missions, ranks and high scores. Z and / flip, Space launches.
 - **Screen savers:** 3D Pipes (WebGL), Starfield and Mystify. They start after idle time; Display Properties has the settings and a live preview.
 - **Welcome to Windows 98:** plays background music from a YouTube embed, with a Music toggle.
