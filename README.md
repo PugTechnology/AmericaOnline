@@ -74,7 +74,7 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 
 ## Using the real AOL sounds
 
-The voice lines ("Welcome!", "You've got mail!", "Goodbye!", "File's done!") use your browser's speech engine by default. The genuine AOL clips aren't bundled, because they aren't ours to redistribute. To use them, drop your own files into `sounds/aol/` as `welcome`, `youve-got-mail`, `goodbye`, `files-done`, `im`, `buddy-in` and `buddy-out` (`.mp3` preferred, `.wav` or `.ogg` also work). They're picked up on the next reload, and the mute setting and volume apply to them. Without a file, the IM and door sounds fall back to synthesized ones. See [`sounds/aol/README.md`](sounds/aol/README.md) for the details.
+The voice lines ("Welcome!", "You've got mail!", "Goodbye!", "File's done!") use your browser's speech engine by default. The genuine AOL clips aren't bundled, because they aren't ours to redistribute. To use them, drop your own files into `sounds/aol/` (`.mp3` preferred, `.wav` or `.ogg` also work), then set each filename in `sounds/aol/clips.json`, which maps the clip names `welcome`, `youve-got-mail`, `goodbye`, `files-done`, `im`, `buddy-in` and `buddy-out` (plus `youve-got-pictures`) to a file, e.g. `"welcome": "welcome.mp3"`. The manifest ships with every entry `null`, so nothing is fetched until you list a file; the change is picked up on the next reload, and the mute setting and volume apply. Without a file, the IM and door sounds fall back to synthesized ones. See [`sounds/aol/README.md`](sounds/aol/README.md) for the details.
 
 ## Running it
 
@@ -88,6 +88,22 @@ Then open http://localhost:8080 (or the port your server prints). It deploys as-
 
 - **Opening `index.html` directly:** from `file://` most things work, but DOOM won't, because browsers refuse to load WebAssembly from disk. Use a local server.
 - **Skipping the boot:** add `?desktop` to the URL (`index.html?desktop`) to jump straight to the desktop. It's handy while developing.
+
+## Developing
+
+There's still no build step. `npm` is only for the tests and the linter (Node 18 or newer):
+
+```sh
+npm install            # Playwright and ESLint
+npm run serve          # python3 -m http.server 8080
+npm test               # Playwright smoke tests (Chromium)
+npm run lint           # ESLint over js/
+```
+
+- `npm test` starts its own server on port 8123. Get a browser with `npx playwright install chromium`, or point `CHROMIUM_PATH` at one you already have. The tests block every off-site request, so they run offline.
+- `?desktop` skips the boot: `index.html?desktop`.
+- `?fastidle` (or `?fastidle=<seconds>`) shortens AOL's idle disconnect from 45 minutes to seconds.
+- CI (`.github/workflows/ci.yml`) runs lint and tests on every push and pull request; pushes to `main` deploy to GitHub Pages.
 
 ## Project layout
 
@@ -113,6 +129,7 @@ js/bsod.js            the Blue Screen of Death
 js/themes.js          Desktop Themes and their canvas wallpapers
 js/y2k.js             the Y2K countdown and rollover
 js/extras.js          StartUp and Channels menu entries
+tests/                Playwright smoke tests
 css/extras.css        styles for all of the above
 js/apps/*.js          Notepad, Calculator, Paint, WordPad, CD Player, Explorer, MS-DOS, Minesweeper, DOOM, IE, AOL, Close Program, system dialogs
 apps/doom/            DOOM host page, engine (WASM) and shareware IWAD

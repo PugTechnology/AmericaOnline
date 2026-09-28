@@ -1,0 +1,16 @@
+{
+  "name": "america-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Compaq Presario running Windows 98 and AOL 4.0, in your browser",
+  "scripts": {
+    "test": "playwright test",
+    "lint": "eslint js",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  }
+}
