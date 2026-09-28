@@ -1,0 +1,88 @@
+/* ==========================================================================
+   Extras: Close Program, Blue Screen, Desktop Themes, Y2K, Achievements,
+   faded Cut icons, and the 28.8k modem's page reveal.
+   ========================================================================== */
+
+/* ---------- Cut files are drawn faded ---------- */
+.desk-icon.cut .img-wrap img:not(.shortcut-arrow), .icon-view .item.cut > img { opacity: 0.45; }
+
+/* ---------- End Task on Explorer / Systray ---------- */
+body.shell-dead #taskbar, body.shell-dead .desk-icon { visibility: hidden !important; }
+body.tray-dead #tray > * { visibility: hidden; }
+
+/* ---------- Close Program ---------- */
+.taskman { padding: 12px 12px 0; }
+.taskman p { margin: 0 0 8px; line-height: 13px; }
+.task-list { height: 130px; overflow: auto; background: #fff; }
+.task-row { padding: 1px 4px; white-space: nowrap; }
+.task-row.selected { background: var(--select); color: #fff; }
+.task-warn { margin-top: 8px !important; }
+.taskman .button-row { padding: 6px 0 10px; }
+
+/* ---------- Blue Screen of Death ---------- */
+.bsod {
+  position: fixed; inset: 0; z-index: 2147483000; background: #0000aa; color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-family: "VT323", "Courier New", monospace; cursor: default; user-select: none;
+}
+.bsod-title { background: #aaaaaa; color: #0000aa; font-size: clamp(14px, 3.2vw, 28px); line-height: 1.1; padding: 0 0.4em; white-space: pre; }
+.bsod-text { margin: 1.1em 0 0; font: clamp(11px, 2.6vw, 26px)/1.15 "VT323", "Courier New", monospace; white-space: pre; text-align: left; color: #fff; -webkit-font-smoothing: none; }
+.bsod-cursor { animation: bsod-blink 1s steps(1) infinite; }
+@keyframes bsod-blink { 50% { opacity: 0; } }
+body.bsod-on { cursor: default; }
+
+/* ---------- Achievements ---------- */
+.ach-toast {
+  position: fixed; right: 8px; bottom: 38px; width: 264px; z-index: 30000;
+  background: #ffffe1; border: 1px solid #000; border-radius: 8px; padding: 7px 24px 8px 10px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3); line-height: 13px;
+  animation: ach-in 0.3s ease-out; transition: opacity 0.25s;
+}
+.ach-toast.out { opacity: 0; }
+.ach-toast::after {
+  content: ""; position: absolute; right: 22px; bottom: -6px; width: 10px; height: 10px; background: #ffffe1;
+  border-right: 1px solid #000; border-bottom: 1px solid #000; transform: rotate(45deg);
+}
+.ach-head { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+.ach-title { font-weight: bold; font-size: 12px; }
+.ach-desc { margin-top: 2px; }
+.ach-x { position: absolute; top: 2px; right: 4px; border: none; background: none; font-size: 15px; line-height: 14px; padding: 0 2px; cursor: pointer; }
+@keyframes ach-in { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ach-app { display: flex; flex-direction: column; height: 100%; padding: 8px; gap: 6px; }
+.ach-count { font-weight: bold; }
+.ach-list { flex: 1; overflow: auto; background: #fff; }
+.ach-row { display: flex; gap: 8px; align-items: flex-start; padding: 5px 6px; border-bottom: 1px solid #e0e0e0; line-height: 13px; }
+.ach-row.locked { color: #808080; }
+.ach-row.locked img { opacity: 0.5; }
+.ach-row small { color: #808080; }
+
+/* ---------- Desktop Themes ---------- */
+.themes-app { padding: 10px 12px 0; }
+.themes-app p { margin: 0 0 8px; }
+.themes-main { display: flex; gap: 10px; }
+.theme-list { width: 190px; height: 150px; overflow: auto; background: #fff; }
+.theme-row { display: flex; align-items: center; gap: 4px; padding: 2px 4px; white-space: nowrap; }
+.theme-row.selected span { background: var(--select); color: #fff; }
+.theme-preview { display: block; width: 220px; height: 150px; box-shadow: var(--sunken); image-rendering: auto; }
+.theme-desc { margin: 6px 0 0 !important; width: 220px; line-height: 13px; }
+.themes-app .group { margin: 8px 0 0; }
+.themes-app .check { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
+.themes-app .button-row { padding: 10px 0; }
+
+/* ---------- Y2K ---------- */
+.y2k-count { padding: 12px 14px; text-align: center; }
+.y2k-digits { font: 48px/1.1 "VT323", "Courier New", monospace; background: #000; color: #f22; margin: 6px 0; padding: 4px; box-shadow: var(--sunken); }
+.y2k-note { margin: 6px 0 4px; }
+.y2k-update { display: flex; gap: 12px; padding: 14px 14px 16px; align-items: flex-start; }
+.y2k-update > div { flex: 1; }
+.y2k-update .progress { margin-top: 8px; width: 100%; }
+.y2k-group { margin: 6px 12px 0; }
+.y2k-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.y2k-row .field { width: 120px; }
+
+/* ---------- 28.8k modem: page reveal and IE's progress bar ---------- */
+.web-mask { position: absolute; left: 0; right: 0; bottom: 0; top: 0; background: #fff; border-top: 2px solid #808080; z-index: 1; pointer-events: none; }
+.web-frame { transition: filter 0.4s; }
+.ie-progress { visibility: hidden; padding: 3px 3px !important; flex: 0 0 120px !important; min-width: 0 !important; }
+.ie-progress.on { visibility: visible; }
+.ie-progress i { display: block; height: 100%; width: 0; background: var(--navy); }

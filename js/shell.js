@@ -122,11 +122,13 @@
     var rect = { w: desktopEl.clientWidth, h: desktopEl.clientHeight };
     var taken = {};
     var items = desktopItems();
+    // Auto Arrange ignores dragged positions and lays everything out in sorted order.
+    if (arrange.auto) items = sortItems(items, arrange.by);
     // Occupied slots first so auto-placed icons don't overlap moved ones.
-    items.forEach(function (it) { var p = iconPositions[it.id]; if (p) taken[p.x + ',' + p.y] = true; });
+    if (!arrange.auto) items.forEach(function (it) { var p = iconPositions[it.id]; if (p) taken[p.x + ',' + p.y] = true; });
     var slot = 0;
     items.forEach(function (it) {
-      var pos = iconPositions[it.id];
+      var pos = arrange.auto ? null : iconPositions[it.id];
       if (!pos) {
         do { pos = gridSlot(slot++, rect); } while (taken[pos.x + ',' + pos.y]);
         taken[pos.x + ',' + pos.y] = true;
@@ -142,6 +144,7 @@
       el._item = it;
       bindIcon(el, it);
       if (selected.indexOf(it.id) !== -1) el.classList.add('selected');
+      if (it.path && FileClip.isCut(it.path)) el.classList.add('cut');
       desktopEl.appendChild(el);
     });
   }
@@ -181,7 +184,7 @@
       var items = [{ label: '&Open', action: it.open }];
       if (it.id === 'sys:computer') items.push({ label: 'E&xplore', action: function () { Shell.launch('explorer', 'C:\\'); } });
       if (it.id === 'sys:recycle') items.push('-', { label: 'Empty Recycle &Bin', action: emptyBin });
-      if (it.path) items.push('-', { label: 'Cu&t', disabled: true }, { label: '&Copy', disabled: true }, '-',
+      if (it.path) items.push('-', { label: 'Cu&t', action: function () { clipDesktop('cut'); } }, { label: '&Copy', action: function () { clipDesktop('copy'); } }, '-',
         { label: '&Delete', action: function () { deleteDesktopFile(it); } },
         { label: 'Rena&me', action: function () { renameDesktopIcon(el, it); } });
       items.push('-', { label: 'P&roperties', action: function () { properties(it); } });
@@ -206,6 +209,7 @@
         document.removeEventListener('pointerup', up);
         el.classList.remove('dragging');
         if (!moved) return;
+        if (arrange.auto) { renderDesktop(); return; }
         // Snap to the icon grid, like "Auto Arrange" off but "Align to grid" on.
         var x = Math.max(4, Math.round((el.offsetLeft - 4) / 75) * 75 + 4);
         var y = Math.max(4, Math.round((el.offsetTop - 4) / 75) * 75 + 4);
@@ -287,12 +291,16 @@
     Menu.popup([
       { label: 'Acti&ve Desktop', items: [{ label: '&View As Web Page', disabled: true }, { label: '&Customize my Desktop...', action: function () { Shell.launch('control', 'display'); } }] },
       '-',
-      { label: 'Arrange &Icons', items: [{ label: 'by &Name', action: arrangeIcons }, { label: 'by &Type', action: arrangeIcons }, '-', { label: '&Auto Arrange', action: arrangeIcons }] },
-      { label: 'Lin&e Up Icons', action: arrangeIcons },
+      { label: 'Arrange &Icons', items: function () {
+        return ['name', 'type', 'size', 'date'].map(function (by) {
+          return { label: { name: 'by &Name', type: 'by &Type', size: 'by &Size', date: 'by &Date' }[by], checked: arrange.auto && arrange.by === by, action: function () { arrangeIcons(by); } };
+        }).concat(['-', { label: '&Auto Arrange', checked: arrange.auto, action: toggleAutoArrange }]);
+      } },
+      { label: 'Lin&e Up Icons', action: lineUp },
       '-',
       { label: 'R&efresh', action: renderDesktop },
       '-',
-      { label: '&Paste', disabled: true },
+      { label: '&Paste', disabled: !FileClip.has(), action: pasteDesktop },
       { label: 'Paste &Shortcut', disabled: true },
       '-',
       { label: 'Ne&w', items: [
@@ -305,11 +313,68 @@
     ], e.clientX, e.clientY);
   }
 
-  function arrangeIcons() {
+  // ---- Arrange Icons: by Name / Type / Size / Date, Line Up, Auto Arrange ----
+  var arrange = Object.assign({ auto: false, by: 'name' }, U.store.get('w98.arrange', {}));
+  function saveArrange() { U.store.set('w98.arrange', arrange); }
+
+  // System icons stay first; files and folders follow in the chosen order.
+  function sortItems(items, by) {
+    function name(i) { return String(i.label).toLowerCase(); }
+    function kind(i) { return i.node.t === 'd' ? '' : i.node.lnk ? 'lnk' : FS.ext(i.path); }
+    var cmp = {
+      name: function (a, b) { return (b.node.t === 'd') - (a.node.t === 'd') || (name(a) < name(b) ? -1 : 1); },
+      type: function (a, b) { return kind(a) < kind(b) ? -1 : kind(a) > kind(b) ? 1 : (name(a) < name(b) ? -1 : 1); },
+      size: function (a, b) { return (FS.sizeOf(a.node) - FS.sizeOf(b.node)) || (name(a) < name(b) ? -1 : 1); },
+      date: function (a, b) { return (a.node.m - b.node.m) || (name(a) < name(b) ? -1 : 1); }
+    }[by] || null;
+    var files = items.filter(function (i) { return i.path; }).sort(cmp || function () { return 0; });
+    return items.filter(function (i) { return !i.path; }).concat(files);
+  }
+
+  function arrangeIcons(by) {
+    if (by) arrange.by = by;
+    saveArrange();
+    var rect = { w: desktopEl.clientWidth, h: desktopEl.clientHeight };
     iconPositions = {};
+    sortItems(desktopItems(), arrange.by).forEach(function (it, i) { iconPositions[it.id] = gridSlot(i, rect); });
     U.store.set('w98.iconpos', iconPositions);
     renderDesktop();
   }
+
+  // Snap wherever the icons are now onto the grid, keeping their order.
+  function lineUp() {
+    var rect = { w: desktopEl.clientWidth, h: desktopEl.clientHeight }, taken = {}, next = 0;
+    var items = desktopItems().filter(function (it) { return iconPositions[it.id]; });
+    items.sort(function (a, b) {
+      var p = iconPositions[a.id], q = iconPositions[b.id];
+      return (p.x - q.x) || (p.y - q.y);
+    });
+    items.forEach(function (it) {
+      var p = iconPositions[it.id];
+      var pos = { x: Math.max(4, Math.round((p.x - 4) / 75) * 75 + 4), y: Math.max(4, Math.round((p.y - 4) / 75) * 75 + 4) };
+      while (taken[pos.x + ',' + pos.y]) pos = gridSlot(next++, rect);
+      taken[pos.x + ',' + pos.y] = true;
+      iconPositions[it.id] = pos;
+    });
+    U.store.set('w98.iconpos', iconPositions);
+    renderDesktop();
+  }
+
+  // Turning Auto Arrange off keeps the icons where the automatic layout put them.
+  function toggleAutoArrange() {
+    arrange.auto = !arrange.auto;
+    saveArrange();
+    if (arrange.auto) { if (window.Achievements) Achievements.unlock('tidy'); renderDesktop(); }
+    else arrangeIcons();
+  }
+  Shell.arrange = arrange;
+
+  // ---- Desktop clipboard ----
+  Shell.desktopSelection = function () {
+    return desktopItems().filter(function (it) { return it.path && selected.indexOf(it.id) !== -1; }).map(function (it) { return it.path; });
+  };
+  function clipDesktop(mode) { FileClip.set(mode, Shell.desktopSelection()); }
+  function pasteDesktop() { FileClip.paste(DESKTOP_DIR); }
 
   function newOnDesktop(kind) {
     try {
@@ -388,12 +453,13 @@
   var clockTimer = null;
   function startClock(clockEl) {
     function tick() {
-      var d = new Date();
+      var d = Shell.clockDate ? Shell.clockDate() : new Date();
       var hh = d.getHours(), ap = hh >= 12 ? 'PM' : 'AM';
       clockEl.textContent = (hh % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap;
       clockEl.title = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     }
     tick();
+    Shell.tickClock = tick;
     clearInterval(clockTimer);
     clockTimer = setInterval(tick, 1000 * 10);
   }
@@ -407,7 +473,7 @@
       '-',
       { label: '&Programs', icon: 'programs', items: programsMenu },
       { label: 'F&avorites', icon: 'favorites', items: [
-        { label: 'Channels', icon: 'folder', items: [] },
+        { label: 'Channels', icon: 'folder', items: function () { return Shell.channelItems ? Shell.channelItems() : []; } },
         { label: 'Links', icon: 'folder', items: [
           { label: 'Best of the Web', icon: 'ie', action: function () { Shell.launch('ie', 'www.yahoo.com'); } },
           { label: 'Microsoft', icon: 'ie', action: function () { Shell.launch('ie', 'www.microsoft.com'); } }
@@ -452,7 +518,10 @@
           { label: '3D Pinball', icon: 'pinball', action: function () { Shell.launch('pinball'); } }
         ] },
         { label: 'System Tools', icon: 'programs', items: [
-          { label: 'Compaq QuickRestore', icon: 'drive-hdd', action: function () { Shell.launch('control', 'quickrestore'); } }
+          { label: 'Compaq QuickRestore', icon: 'drive-hdd', action: function () { Shell.launch('control', 'quickrestore'); } },
+          { label: 'Desktop Themes', icon: 'display', action: function () { Shell.launch('themes'); } },
+          { label: 'Close Program', icon: 'exe', action: function () { if (window.TaskMan) TaskMan.open(); } },
+          { label: 'Achievements', icon: 'favorites', action: function () { Shell.launch('achievements'); } }
         ] },
         { label: 'Notepad', icon: 'notepad', action: function () { Shell.launch('notepad'); } }
       ] },
@@ -464,7 +533,7 @@
         { label: 'DOOM', icon: 'doom', action: function () { Shell.launch('doom'); } },
         { label: 'DOOM Read Me', icon: 'text-file', action: function () { Shell.open('C:\\DOOM\\README.TXT'); } }
       ] },
-      { label: 'StartUp', icon: 'programs', items: [] },
+      { label: 'StartUp', icon: 'programs', items: function () { return Shell.startupItems ? Shell.startupItems() : []; } },
       { label: 'Internet Explorer', icon: 'ie', action: function () { Shell.launch('ie'); } },
       { label: 'MS-DOS Prompt', icon: 'msdos', action: function () { Shell.launch('msdos'); } },
       { label: 'Windows Explorer', icon: 'folder-open', action: function () { Shell.launch('explorer', 'C:\\'); } }
@@ -535,12 +604,14 @@
         '-',
         { label: '&Minimize All Windows', action: showDesktop },
         '-',
+        { label: 'Task &Manager...', shortcut: 'Ctrl+Alt+Del', action: function () { if (window.TaskMan) TaskMan.open(); } },
         { label: 'P&roperties', action: function () { Shell.launch('control', 'display'); } }
       ], e.clientX, e.clientY - 130);
     });
 
     root.appendChild(desktopEl);
     root.appendChild(taskbar);
+    Shell.applyDesktopStyle();   // again once attached: themes need the live #desktop
     startClock(clock);
     bindDesktop();
     renderDesktop();
@@ -555,13 +626,20 @@
     globalsBound = true;
     WM.onChange(renderTaskbar);
     FS.onChange(function () { renderDesktop(); });
+    FileClip.onChange(function () { renderDesktop(); });
     window.addEventListener('resize', renderDesktop);
     // The Windows key opens Start only when tapped on its own (so Cmd+S on a Mac doesn't).
     var metaAlone = false;
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Meta' || e.key === 'OS') { metaAlone = !e.repeat; return; }
       metaAlone = false;
-      if (e.ctrlKey && e.key === 'Escape' && Shell.ready()) { toggleStart(); e.preventDefault(); }
+      if (e.ctrlKey && e.key === 'Escape' && !e.shiftKey && Shell.ready()) { toggleStart(); e.preventDefault(); }
+      // Ctrl+X / C / V on the desktop itself (Explorer windows handle their own).
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !WM.active && Shell.ready() && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) {
+        var k = e.key.toLowerCase();
+        if (k === 'x' || k === 'c') { clipDesktop(k === 'x' ? 'cut' : 'copy'); e.preventDefault(); }
+        else if (k === 'v') { pasteDesktop(); e.preventDefault(); }
+      }
     });
     document.addEventListener('keyup', function (e) {
       if ((e.key === 'Meta' || e.key === 'OS') && metaAlone && Shell.ready()) toggleStart();

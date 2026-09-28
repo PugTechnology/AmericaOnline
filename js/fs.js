@@ -183,6 +183,19 @@
     return !!name && !/[\\/:*?"<>|]/.test(name) && name.trim().length > 0;
   }
 
+  // Is path `a` the same as, or below, path `b`?
+  function inside(a, b) {
+    var x = split(a).join('\\').toLowerCase(), y = split(b).join('\\').toLowerCase();
+    return x === y || x.indexOf(y + '\\') === 0;
+  }
+  // A free name in folder `f`: "Copy of X", then "Copy (2) of X"...
+  function copyName(f, name) {
+    if (childKey(f, name) === null) return name;
+    var n = 'Copy of ' + name, i = 2;
+    while (childKey(f, n) !== null) n = 'Copy (' + (i++) + ') of ' + name;
+    return n;
+  }
+
   function parentOf(path) {
     var p = resolve(dirname(path));
     if (!p || p.t !== 'd') throw new Error('PATHNOTFOUND');
@@ -293,6 +306,49 @@
       changed(binName);
     },
 
+    // Copy / move a file or folder into folder `destDir`. Name clashes become
+    // "Copy of X", "Copy (2) of X". Both return the name used in the destination.
+    copy: function (src, destDir) {
+      var sp = parentOf(src), k = childKey(sp, basename(src)), dest = resolve(destDir);
+      if (k === null) throw new Error('FILENOTFOUND');
+      if (!dest || dest.t !== 'd') throw new Error('PATHNOTFOUND');
+      var node = sp.c[k];
+      if (node.t === 'd' && inside(destDir, src)) throw new Error('INSELF');
+      var copy = JSON.parse(JSON.stringify(node));
+      (function strip(n) { delete n.sys; if (n.c) for (var c in n.c) strip(n.c[c]); })(copy);
+      var name = copyName(dest, k);
+      copy.m = now();
+      dest.c[name] = copy;
+      dest.m = now();
+      changed(join(destDir, name));
+      return name;
+    },
+
+    move: function (src, destDir) {
+      var sp = parentOf(src), k = childKey(sp, basename(src)), dest = resolve(destDir);
+      if (k === null) throw new Error('FILENOTFOUND');
+      if (!dest || dest.t !== 'd') throw new Error('PATHNOTFOUND');
+      var node = sp.c[k];
+      if (node.sys) throw new Error('READONLY');
+      if (dest === sp) return k;
+      if (node.t === 'd' && inside(destDir, src)) throw new Error('INSELF');
+      var name = copyName(dest, k);
+      delete sp.c[k];
+      dest.c[name] = node;
+      dest.m = now();
+      changed(join(destDir, name));
+      return name;
+    },
+
+    // A desktop-style shortcut file that launches program `app`.
+    mklink: function (path, app) {
+      var parent = parentOf(path), name = basename(path);
+      if (!validName(name)) throw new Error('BADNAME');
+      parent.c[name] = file('', { app: app, lnk: true });
+      parent.c[name].m = now();
+      changed(path);
+    },
+
     emptyRecycleBin: function () {
       var bin = resolve('C:\\RECYCLED');
       if (bin) { bin.c = {}; changed('C:\\RECYCLED'); }
@@ -334,13 +390,14 @@
         case 'BADNAME': return 'A filename cannot contain any of the following characters:\n\\ / : * ? " < > |';
         case 'EXISTS': return 'Cannot rename ' + basename(path || '') + ': A file with the name you specified already exists. Specify a different filename.';
         case 'READONLY': return 'Access is denied.\n\nMake sure the disk is not full or write-protected and that the file is not currently in use.';
+        case 'INSELF': return 'Cannot copy ' + basename(path || '') + ': The destination folder is a subfolder of the source folder.';
         case 'PATHNOTFOUND': return 'The folder ' + dirname(path || '') + ' does not exist.';
         default: return (path ? path + '\n' : '') + 'The file could not be accessed.';
       }
     }
   };
 
-  ['write', 'mkdir', 'rename', 'remove', 'recycle', 'restore', 'emptyRecycleBin'].forEach(function (name) {
+  ['write', 'mkdir', 'rename', 'remove', 'recycle', 'restore', 'emptyRecycleBin', 'copy', 'move', 'mklink'].forEach(function (name) {
     var fn = FS[name];
     FS[name] = function () {
       snapshot = JSON.stringify(root);

@@ -43,6 +43,7 @@
       return [
         cp('Add/Remove Programs', 'exe', 'addremove', 'Sets up programs and creates shortcuts.'),
         cp('Date/Time', 'settings', 'datetime', 'Changes date, time, and time zone information.'),
+        cp('Desktop Themes', 'display', 'themes', 'Changes the look and sound of your whole desktop with a Plus! 98 theme.'),
         cp('Display', 'display', 'display', 'Changes display settings: background, colors, screen saver.'),
         cp('Compaq QuickRestore', 'drive-hdd', 'quickrestore', 'Restores drive C: to the way it left the factory.'),
         cp('Internet', 'ie', 'internet', 'Configures your Internet display and connection settings.'),
@@ -220,6 +221,7 @@
       items.forEach(function (it) {
         var el = h('div', { className: 'item', tabindex: '-1' }, [U.img(it.icon, view === 'list' ? 16 : 32), h('span', { className: 'label' }, it.name)]);
         if (it.node && it.node.lnk) el.firstChild.classList.add('lnk');
+        if (it.path && loc !== 'Recycle Bin' && FileClip.isCut(it.path)) el.classList.add('cut');
         it.el = el;
         el.addEventListener('pointerdown', function (e) { e.stopPropagation(); select(it); });
         U.onActivate(el, function () { it.open(); });
@@ -299,6 +301,11 @@
 
     function isFolderLoc() { return !SPECIAL[loc]; }
 
+    // Cut / Copy / Paste through the shared file clipboard.
+    function clip(mode) { if (selected && selected.path && loc !== 'Recycle Bin') FileClip.set(mode, [selected.path]); }
+    function pasteHere() { if (isFolderLoc()) FileClip.paste(loc, win); }
+    function canClip() { return !!selected && !!selected.path && loc !== 'Recycle Bin'; }
+
     function itemMenu(it, x, y) {
       var m = [{ label: '&Open', action: it.open }];
       if (it.kind === 'folder') m.push({ label: '&Explore', action: function () { Shell.launch('explorer', it.path); } });
@@ -308,7 +315,9 @@
           { label: '&Delete', action: function () { deleteItem(it); } }, '-',
           { label: 'P&roperties', action: function () { showProps(it, win); } }];
       } else if (it.path) {
-        m.push('-', { label: 'Cu&t', disabled: true }, { label: '&Copy', disabled: true }, '-',
+        m.push('-', { label: 'Cu&t', disabled: it.node && it.node.sys, action: function () { clip('cut'); } }, { label: '&Copy', action: function () { clip('copy'); } });
+        if (it.kind === 'folder') m.push({ label: '&Paste', disabled: !FileClip.has(), action: function () { FileClip.paste(it.path, win); } });
+        m.push('-',
           { label: '&Delete', disabled: it.node && it.node.sys, action: function () { deleteItem(it); } },
           { label: 'Rena&me', disabled: it.node && it.node.sys, action: function () { rename(it); } },
           '-', { label: 'P&roperties', action: function () { showProps(it, win); } });
@@ -326,7 +335,7 @@
         { label: 'R&efresh', action: render }
       ];
       if (isFolderLoc()) {
-        m.push('-', { label: '&Paste', disabled: true }, '-', { label: 'Ne&w', items: [
+        m.push('-', { label: '&Paste', disabled: !FileClip.has(), action: pasteHere }, '-', { label: 'Ne&w', items: [
           { label: '&Folder', icon: 'folder', action: function () { newItem('folder'); } },
           '-',
           { label: 'Text Document', icon: 'text-file', action: function () { newItem('txt'); } }
@@ -396,6 +405,11 @@
       if (e.key === 'Delete' && selected) { deleteItem(selected); return true; }
       if (e.key === 'F2' && selected && selected.path) { rename(selected); return true; }
       if (e.key === 'F5') { render(); return true; }
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        var k = e.key.toLowerCase();
+        if (k === 'x' || k === 'c') { clip(k === 'x' ? 'cut' : 'copy'); return true; }
+        if (k === 'v') { pasteHere(); return true; }
+      }
       return false;
     };
 
@@ -413,8 +427,13 @@
           '-', { label: '&Close', action: function () { win.close(); } });
         return m;
       } },
-      { label: '&Edit', items: [{ label: '&Undo', disabled: true }, '-', { label: 'Cu&t', disabled: true }, { label: '&Copy', disabled: true }, { label: '&Paste', disabled: true }, '-',
-        { label: 'Select &All', action: function () { WM.msgbox({ title: locTitle(loc), owner: win, icon: 'info', text: 'Select one thing at a time. It was 1998, and we were patient.' }); } }] },
+      { label: '&Edit', items: function () {
+        return [{ label: '&Undo', disabled: true }, '-',
+          { label: 'Cu&t', shortcut: 'Ctrl+X', disabled: !canClip() || (selected.node && selected.node.sys), action: function () { clip('cut'); } },
+          { label: '&Copy', shortcut: 'Ctrl+C', disabled: !canClip(), action: function () { clip('copy'); } },
+          { label: '&Paste', shortcut: 'Ctrl+V', disabled: !isFolderLoc() || !FileClip.has(), action: pasteHere }, '-',
+          { label: 'Select &All', action: function () { WM.msgbox({ title: locTitle(loc), owner: win, icon: 'info', text: 'Select one thing at a time. It was 1998, and we were patient.' }); } }];
+      } },
       { label: '&View', items: function () {
         return [
           { label: 'Lar&ge Icons', checked: view === 'icons', action: function () { setView('icons'); render(); } },
@@ -435,8 +454,9 @@
       { label: '&Help', items: [{ label: '&About Windows 98', action: function () { Shell.launch('about', { name: 'Windows 98', icon: 'windows-flag' }); } }] }
     ]);
 
-    var unsub = FS.onChange(function () { if (!win.closed) { var sel = selected && selected.rawName; render(); if (sel) { var it = items.filter(function (i) { return i.rawName === sel; })[0]; if (it) select(it); } } });
-    win.on('close', unsub);
+    function refresh() { if (!win.closed) { var sel = selected && selected.rawName; render(); if (sel) { var it = items.filter(function (i) { return i.rawName === sel; })[0]; if (it) select(it); } } }
+    var unsub = FS.onChange(refresh), unclip = FileClip.onChange(refresh);
+    win.on('close', function () { unsub(); unclip(); });
     render();
     return win;
   }

@@ -35,6 +35,17 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 - **Internet Explorer 4:** browses the web as it was in 1996–2001.
 - **Control Panel:** Display (desktop colour and pattern), Sounds (mute), System Properties, Date/Time, and *Compaq QuickRestore* to wipe C: back to factory.
 
+**Shell extras**
+- **Close Program (Ctrl+Alt+Del):** lists the open windows plus Explorer and Systray, and now and then one is *(Not responding)*. **End Task** closes it (ending Explorer makes the taskbar and icons vanish, then Windows restarts it), **Shut Down** and **Cancel** work too. Browsers often eat Ctrl+Alt+Del, so **Ctrl+Alt+Backspace** and **Ctrl+Shift+Esc** do the same, and the taskbar right-click menu has *Task Manager...*. Press the combo again while the dialog is open and the computer restarts.
+- **Blue Screen of Death:** the text-mode "A fatal exception 0E has occurred at 0028:C0011E36 in VXD VMM(01)" screen. Type `con\con` (or `C:\CON\CON`) into Run or the MS-DOS Prompt, open DOOM and Pinball together and hope, or find the hidden `crash` keyword (Run, MS-DOS, or just type it on the desktop). Any key returns to the desktop, sometimes to a second "Windows protection error" screen, and a key there reboots.
+- **Cut, Copy and Paste** for files on the desktop and in Explorer, from the menus or with Ctrl+X, C and V. Cut icons are drawn faded, name clashes become "Copy of X", and you can paste into folders.
+- **Arrange Icons** by Name, Type, Size or Date, **Line Up Icons**, and a **Auto Arrange** toggle that is remembered.
+- **Desktop Themes** (Control Panel, or Programs > Accessories > System Tools): Windows Default, Space, Dangerous Creatures, Inside Your Computer, Jungle, Mystery and The 60's USA. Each draws its wallpaper on a canvas (no image files), recolours the title bars and can change the "ding". A colour, pattern or wallpaper picked in Display Properties always wins over the theme's.
+- **Simulate 28.8k modem** (IE's View menu; on by default while AOL is signed on): web pages take 5 to 9 seconds, with the throbber spinning, "Opening page http://..." in the status bar, a slow progress bar, and the page revealed top-down as a blur that sharpens.
+- **Y2K:** Date/Time Properties has a *Y2K test* button (or set the pretend clock to 12/31/1999). The tray clock counts down from 11:59:50 PM, rolls over to 1/1/1900, and a chain of dialogs ends in the Microsoft Y2K Update. Only the tray clock is faked.
+- **Achievements:** balloon toasts for things like your first blue screen, Ctrl+Alt+Del, a theme change, emptying the Recycle Bin and surviving Y2K. View them from `C:\My Documents\Achievements` or Programs > Accessories > System Tools. Other features can call `window.Achievements && Achievements.unlock('id', { title, desc, icon })`.
+- Start menu: **Programs > StartUp** and **Favorites > Channels** (MSNBC, Disney, Warner Bros., PointCast) are filled in.
+
 **America Online 4.0**
 - **Sign On:** screen names, New User and Guest.
 - **Dial-up:** the six-step connection (modem, running man, people) synced to the modem sound, with the occasional busy signal.
@@ -76,7 +87,14 @@ js/shell.js           desktop icons, taskbar, Start menu, program registry
 js/dialogs.js         Open / Save As common dialog
 js/web.js             Wayback Machine browser panes
 js/boot.js            the power-on to desktop sequence (and back)
-js/apps/*.js          Notepad, Explorer, MS-DOS, Minesweeper, DOOM, IE, AOL, system dialogs
+js/clipboard.js       the file clipboard (Cut / Copy / Paste)
+js/achievements.js    achievements, toasts and the viewer
+js/bsod.js            the Blue Screen of Death
+js/themes.js          Desktop Themes and their canvas wallpapers
+js/y2k.js             the Y2K countdown and rollover
+js/extras.js          StartUp and Channels menu entries
+css/extras.css        styles for all of the above
+js/apps/*.js          Notepad, Explorer, MS-DOS, Minesweeper, DOOM, IE, AOL, Close Program, system dialogs
 apps/doom/            DOOM host page, engine (WASM) and shareware IWAD
 fonts/                MS Sans Serif pixel font and VT323, with their licenses
 ```

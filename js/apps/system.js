@@ -21,6 +21,7 @@
     cmd = (cmd || '').trim();
     if (!cmd) return true;
     var lower = cmd.toLowerCase();
+    if (window.BSOD && BSOD.command(lower)) return true;   // CON\CON, and the hidden "crash"
     if (RUN_ALIASES[lower]) { Shell.launch(RUN_ALIASES[lower], lower === 'explorer' || lower === 'explorer.exe' ? 'C:\\' : undefined); return true; }
     if (/^(https?:\/\/|www\.)/i.test(cmd) || /\.(com|org|net|edu)(\/|$)/i.test(cmd)) { Shell.launch('ie', cmd); return true; }
     if (/^[a-z]:/i.test(cmd)) {
