@@ -954,13 +954,15 @@
   }
 
   // ---- AOL voice clips (drop-in files, with fallbacks) ------------------------
-  // Sound.clip('welcome', 'Welcome!') looks for sounds/aol/welcome.mp3, .wav, .ogg.
-  // No file? It falls back to a synth sound (im, buddy-in, buddy-out) or to speech.
+  // Sound.clip('welcome', 'Welcome!') plays the file named in sounds/aol/clips.json.
+  // No entry (null), or no manifest? It falls back to a synth sound (im, buddy-in,
+  // buddy-out) or to speech. Only listed files are fetched, so a stock checkout
+  // makes no failing requests.
   var CLIP_DIR = 'sounds/aol/';
-  var CLIP_EXTS = ['mp3', 'wav', 'ogg'];
   var CLIP_SYNTH = { 'im': 'imReceive', 'buddy-in': 'doorOpen', 'buddy-out': 'doorClose' };
-  var clipBufs = {};             // name -> AudioBuffer, or false once every extension failed
+  var clipBufs = {};             // name -> AudioBuffer, or false once it failed or isn't listed
   var clipLoads = {};            // name -> in-flight load promise
+  var clipManifest = null;       // promise for the parsed clips.json, fetched once
 
   function fetchClip(url) {
     return global.fetch(url).then(function (r) {
@@ -973,17 +975,28 @@
       });
     });
   }
+  // Resolves with {name: filename|null}; {} if clips.json can't be loaded (e.g. file://).
+  function loadManifest() {
+    if (!clipManifest) {
+      clipManifest = (global.fetch ? global.fetch(CLIP_DIR + 'clips.json').then(function (r) {
+        if (!r.ok) throw new Error('no manifest');
+        return r.json();
+      }) : Promise.reject(new Error('no fetch'))).then(function (m) {
+        return (m && typeof m === 'object') ? m : {};
+      }, function () { return {}; });
+    }
+    return clipManifest;
+  }
   // Resolves with the decoded buffer, or null. Failures are remembered.
   function loadClip(name) {
     if (clipBufs[name] !== undefined) return Promise.resolve(clipBufs[name] || null);
     if (!ctx || !global.fetch) return Promise.resolve(null);   // not unlocked yet: try again later
     if (clipLoads[name]) return clipLoads[name];
-    var i = 0;
-    function next() {
-      if (i >= CLIP_EXTS.length) { clipBufs[name] = false; return null; }
-      return fetchClip(CLIP_DIR + name + '.' + CLIP_EXTS[i++]).then(function (b) { clipBufs[name] = b; return b; }, next);
-    }
-    clipLoads[name] = Promise.resolve().then(next).then(function (b) { delete clipLoads[name]; return b; }, function () { delete clipLoads[name]; return null; });
+    clipLoads[name] = loadManifest().then(function (m) {
+      var file = m[name];
+      if (typeof file !== 'string' || !file) { clipBufs[name] = false; return null; }
+      return fetchClip(CLIP_DIR + file).then(function (b) { clipBufs[name] = b; return b; }, function () { clipBufs[name] = false; return null; });
+    }).then(function (b) { delete clipLoads[name]; return b; }, function () { delete clipLoads[name]; return null; });
     return clipLoads[name];
   }
   function playClip(buf) {
