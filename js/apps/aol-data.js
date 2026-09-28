@@ -232,6 +232,132 @@
     ]
   };
 
+  // People Connection rooms. Each category has its own cast and chatter (ROOM_FLAVOR);
+  // a room can add lines of its own. Public rooms hold 23 people, like the real ones.
+  var ROOMS = [
+    { id: 'town', name: 'Town Square', rooms: [
+      { id: 'lobby42', name: 'Town Square - Lobby 42', base: 12 }, { id: 'lobby7', name: 'Town Square - Lobby 7', base: 18 },
+      { id: 'lobby113', name: 'Town Square - Lobby 113', base: 6 }, { id: 'lobby250', name: 'Town Square - Lobby 250', base: 23 },
+      { id: 'newbies', name: 'New Members Lounge', base: 9, lines: ['how do i get the modem to stop screeching', 'welcome to AOL!! click the little running man', 'is this thing on'] }
+    ] },
+    { id: 'arts', name: 'Arts and Entertainment', rooms: [
+      { id: 'movies', name: 'Movie Talk', base: 15, lines: ['the matrix was AMAZING', 'titanic 4 times in theaters no shame', 'blockbuster was out of the phantom menace'] },
+      { id: 'trivia', name: 'Trivia Zone', base: 21, lines: ['what year did the titanic sink', 'Q: what is the capital of ohio', 'the answer is columbus!!!'] },
+      { id: 'music', name: 'Pop Music Lounge', base: 19, lines: ['britney vs christina go', 'the new TLC is fire', 'i burned a mix cd for my crush'] },
+      { id: 'tv', name: 'TV Talk: Prime Time', base: 8, lines: ['who watched friends last night', 'the x-files finale?? no way', 'dawsons creek is peak tv'] },
+      { id: 'anime', name: 'Anime and Manga', base: 11, lines: ['dragon ball z is on toonami at 4', 'pokemon is anime too fight me', 'sailor moon forever'] }
+    ] },
+    { id: 'friends', name: 'Friends', rooms: [
+      { id: 'teen', name: 'Teen Chat 1', base: 23, lines: ['ugh my mom is on the phone AGAIN', 'lol my hair is so bad today', 'i am so bored'] },
+      { id: 'twenty', name: '20 Something', base: 14, lines: ['anyone else pulling an all nighter', 'my roommate is watching seinfeld reruns', 'first job first apartment first 56k modem'] },
+      { id: 'thirty', name: '30 Something', base: 10, lines: ['mortgage rates are crazy', 'anyone else feel old at blockbuster', 'kids are finally asleep'] },
+      { id: 'over40', name: 'Over 40 Cafe', base: 7, lines: ['HELLO EVERYONE', 'how do i make the letters small', 'my grandson set this up for me'] },
+      { id: 'ohio', name: 'Friends of Ohio', base: 5, lines: ['go browns', 'lake erie is frozen again', 'anyone near cleveland'] }
+    ] },
+    { id: 'life', name: 'Life', rooms: [
+      { id: 'parents', name: 'Parents Place', base: 8, lines: ['potty training is a war', 'the kids want the computer back', 'furby is driving me insane'] },
+      { id: 'pets', name: 'Pet Talk', base: 13, lines: ['my cat walked across the keyboard sorry', 'pets.com sock puppet!!', 'my dog eats everything'] },
+      { id: 'cooking', name: 'Cooking Corner', base: 6, lines: ['pizza rolls in the toaster oven', 'anyone have a good meatloaf recipe', 'jello salad is underrated'] },
+      { id: 'health', name: 'Health and Fitness', base: 9, lines: ['thigh master anyone', 'i started a low fat diet', 'atkins is working for me'] },
+      { id: 'books', name: 'Book Nook', base: 4, lines: ['harry potter is so good', 'did you read the celestine prophecy', 'oprah book club pick again'] }
+    ] },
+    { id: 'places', name: 'Places', rooms: [
+      { id: 'newyork', name: 'New York City', base: 17, lines: ['the subway smells', 'anyone at the knicks game', 'pizza slice for a dollar'] },
+      { id: 'california', name: 'Southern California', base: 20, lines: ['the traffic on the 405 is a joke', 'surfs up in huntington', 'no rain again'] },
+      { id: 'texas', name: 'Texas Roundup', base: 12, lines: ['it is 104 degrees', 'friday night lights!', 'anyone want to grab tex mex'] },
+      { id: 'florida', name: 'Florida Sunshine', base: 11, lines: ['hurricane season again', 'disney world was crowded', 'senior discount at the buffet'] },
+      { id: 'uk', name: 'United Kingdom', base: 6, lines: ['cuppa anyone', 'it is 3am here lol', 'spice girls forever'] }
+    ] },
+    { id: 'romance', name: 'Romance', rooms: [
+      { id: 'flirt', name: 'Flirts Nook', base: 22, lines: ['hey cutie', 'pm me', 'i am just here for the conversation lol'] },
+      { id: 'love', name: 'Love Songs', base: 9, lines: ['my heart will go on FOREVER', 'boyz II men play so slow', 'nobody: me: listening to celine'] },
+      { id: 'poetry', name: 'Poetry Cafe', base: 5, lines: ['roses are red violets are blue', 'i wrote a poem for my geocities page', 'ode to my 56k modem'] },
+      { id: 'late', name: 'Late Night Lounge', base: 16, lines: ['cant sleep', 'its 2am and the modem is quiet', 'anyone else up watching infomercials'] }
+    ] },
+    { id: 'special', name: 'Special Interests', rooms: [
+      { id: 'compute', name: 'Computing Help', base: 13, lines: ['have you tried restarting', 'how do i install a soundblaster', 'my hard drive is making the grinding noise'] },
+      { id: 'gamers', name: 'Gamers Realm', base: 21, lines: ['starcraft ladder tonight', 'goldeneye multiplayer no oddjob', 'quake 3 arena is coming'] },
+      { id: 'starwars', name: 'Star Wars Fans', base: 15, lines: ['episode 1 was fine', 'jar jar is a sith lord theory', 'i waited in line for 3 days'] },
+      { id: 'xfiles', name: 'X-Files Believers', base: 10, lines: ['the truth is out there', 'mulder and scully are so obvious', 'the smoking man did it'] },
+      { id: 'y2k', name: 'Y2K Preparedness', base: 12, lines: ['i bought 40 cans of beans', 'the banks will be fine i think', 'candles and a generator'] }
+    ] }
+  ];
+
+  // Cast and chatter per category ('member' is for rooms you create).
+  var ROOM_FLAVOR = {
+    town: { people: CHAT.people, lines: CHAT.lines },
+    arts: { people: ['MovieBuff1999', 'TRLfanatic', 'PopQueen98', 'Kramer_Fan', 'JediMasterJ', 'MatrixNeo1', 'SailorMoon_4ever', 'BlockbusterBob'],
+      lines: ['did anyone see the finale', 'this show is so overrated', 'who is your fave', 'best movie of the year hands down', 'lol that scene', 'rented it twice'] },
+    friends: { people: ['HotShot17', 'xoxSweetieXox', 'CleveRocks', 'MomOf3_OH', 'BrownsBacker', 'Tim_the_Tool', 'LilMissSunshine', 'CoolCat1965'],
+      lines: ['hi everyone', 'whats up ya all', 'anybody here', 'lol', 'brb', 'ttyl gtg', 'my parents are home', 'hey whats going on'] },
+    life: { people: ['GrannyKnits', 'FitFreak22', 'DogLover_Di', 'ChefBoyRJ', 'BookWorm_Barb', 'PapaBear1958', 'GardenGnome99', 'CraftyKate'],
+      lines: ['anyone else tried that', 'great tip thanks', 'i have been doing that for years', 'my husband says otherwise lol', 'good morning all', 'what a week'] },
+    places: { people: ['NYCTaxiDriver', 'SoCalSurfer', 'TexasTina', 'SunshineSteve', 'LondonLad_UK', 'BigAppleAl', 'BeachBum77', 'YeeHawYvonne'],
+      lines: ['weather here is nuts', 'anyone from my area', 'lol i know that place', 'is it raining there too', 'i love it here', 'thats so far away'] },
+    romance: { people: ['SweetTalker99', 'RomeoInOhio', 'JulietsBalcony', 'LoveDoctor1', 'SecretAdmirer', 'MoonlightMel', 'HopelessRomantc', 'CandleLightCarl'],
+      lines: ['anyone want to talk', 'so what do you like to do', 'love is in the air', 'i just got dumped :-(', 'aww thats sweet', 'slow songs only', 'you seem nice'] },
+    special: { people: ['ByteMe2000', 'GeekSquadGary', 'QuakeGod', 'X_Phile_Fox', 'DarthMaulFan', 'BeanCounter99', 'HackerHank', 'DialUpDoug'],
+      lines: ['rtfm', 'have you checked the readme', 'that is so 1998', 'anyone else here play', 'this channel needs more members', 'ok that is actually cool', 'brb reboot'] },
+    member: { people: CHAT.people, lines: CHAT.lines }
+  };
+
+  // Fake member profiles for the Member Directory.
+  var MEMBERS = [
+    { sn: 'SkaterGrl1999', name: 'Ashley', location: 'Tampa, Florida', hobbies: 'skateboarding, mall trips, TRL', quote: 'Skate or die (but mostly skate)', computers: 'eMachines, 33.6K modem', job: '8th grade' },
+    { sn: 'xXGamerDudeXx', name: 'Kyle', location: 'Columbus, Ohio', hobbies: 'DOOM, StarCraft, Quake, pizza rolls', quote: 'iddqd', computers: 'Gateway 2000, Voodoo2', job: 'student' },
+    { sn: 'SurferJoe77', name: 'Joe', location: 'San Diego, California', hobbies: 'surfing, skateboarding, The Matrix', quote: 'Cowabunga dude', computers: 'iMac (Bondi Blue)', job: 'lifeguard' },
+    { sn: 'CoolBreeze42', name: 'Brianna', location: 'Portland, Oregon', hobbies: 'HTML, geocities, blinking text', quote: 'Under construction!', computers: 'Compaq Presario', job: 'webmaster' },
+    { sn: 'DialUpDan', name: 'Dan', location: 'Cleveland, Ohio', hobbies: 'chatting, Napster, waiting for pages', quote: 'Please get off the phone', computers: 'Packard Bell, 28.8K', job: 'sophomore' },
+    { sn: 'Mom', name: 'Linda', location: 'Cleveland, Ohio', hobbies: 'gardening, casseroles, learning the internet', quote: 'Eat something', computers: 'the family computer', job: 'homemaker' },
+    { sn: 'Grandpa1931', name: 'Walter', location: 'Sarasota, Florida', hobbies: 'crosswords, fishing, typing with two fingers', quote: 'IN MY DAY WE HAD PARTY LINES', computers: 'whatever my grandson set up', job: 'retired' },
+    { sn: 'TPSReports', name: 'Peter', location: 'Austin, Texas', hobbies: 'fax machines, memos, cubicle golf', quote: 'Mmmyeah', computers: 'Dell Dimension', job: 'software engineer' },
+    { sn: 'BossMan99', name: 'Bill', location: 'Dallas, Texas', hobbies: 'golf, quarterly reports, Palm Pilot', quote: 'Synergy', computers: 'IBM ThinkPad', job: 'regional manager' },
+    { sn: 'BeanieBabyQueen', name: 'Debbie', location: 'Toledo, Ohio', hobbies: 'Beanie Babies, garage sales, eBay', quote: 'They will pay for college', computers: 'Compaq Presario', job: 'dental hygienist' },
+    { sn: 'NSYNCfan4ever', name: 'Megan', location: 'Orlando, Florida', hobbies: 'N SYNC, Justin, boy bands', quote: 'Bye bye bye', computers: 'Mom\'s computer', job: 'seventh grade' },
+    { sn: 'Tamagotchi_Mom', name: 'Karen', location: 'Akron, Ohio', hobbies: 'feeding my kid\'s Tamagotchi, scrapbooking', quote: 'Not again', computers: 'HP Pavilion', job: 'office manager' },
+    { sn: 'FurbyLover98', name: 'Tyler', location: 'Denver, Colorado', hobbies: 'Furbies, Pokemon cards, Game Boy', quote: 'Me love you', computers: 'iMac', job: 'fifth grade' },
+    { sn: 'GoldenEye007', name: 'Marcus', location: 'Seattle, Washington', hobbies: 'N64, GoldenEye, Mountain Dew', quote: 'No Oddjob', computers: 'Nintendo 64 (does it count)', job: 'college freshman' },
+    { sn: 'MillenniumMan', name: 'Roger', location: 'Phoenix, Arizona', hobbies: 'Y2K prep, canned goods, ham radio', quote: 'Are you ready for 2000?', computers: 'Pentium II 300', job: 'network admin' },
+    { sn: 'Xena_Warrior99', name: 'Tina', location: 'Boise, Idaho', hobbies: 'Xena, cosplay, sword collecting', quote: 'Yiiiiyiyiyiyiyi', computers: 'Gateway', job: 'librarian' },
+    { sn: 'HotShot17', name: 'Chad', location: 'Miami, Florida', hobbies: 'basketball, Allen Iverson, AIM', quote: 'Ball is life', computers: 'Sony Vaio', job: 'junior' },
+    { sn: 'LondonLad_UK', name: 'Oliver', location: 'London, England', hobbies: 'football, Oasis, Spice Girls (ironically)', quote: 'Cheers mate', computers: 'Amstrad', job: 'student' },
+    { sn: 'ByteMe2000', name: 'Neil', location: 'San Jose, California', hobbies: 'Linux, Slashdot, soldering', quote: 'RTFM', computers: 'a bunch, all of them beige', job: 'sysadmin' },
+    { sn: 'GrannyKnits', name: 'Dorothy', location: 'Des Moines, Iowa', hobbies: 'knitting, grandkids, cookie recipes', quote: 'A stitch in time', computers: 'a computer', job: 'retired teacher' },
+    { sn: 'ChefBoyRJ', name: 'RJ', location: 'New Orleans, Louisiana', hobbies: 'cooking, gumbo, food network', quote: 'Bam!', computers: 'Compaq Presario', job: 'line cook' },
+    { sn: 'MoonlightMel', name: 'Melissa', location: 'Chicago, Illinois', hobbies: 'poetry, candles, Dawson\'s Creek', quote: 'Stars can\'t shine without darkness', computers: 'Dell', job: 'college sophomore' },
+    { sn: 'JediMasterJ', name: 'Jason', location: 'Burbank, California', hobbies: 'Star Wars, collecting action figures, lightsabers', quote: 'Do or do not', computers: 'Compaq Presario, Voodoo3', job: 'video store clerk' },
+    { sn: 'GeekSquadGary', name: 'Gary', location: 'Minneapolis, Minnesota', hobbies: 'fixing computers, Star Trek, Linux', quote: 'Have you tried turning it off and on', computers: 'custom built', job: 'tech support' }
+  ];
+
+  // Words for Spell Check: not the whole dictionary, but enough for a friendly letter.
+  var SPELL = ('a about above across after again all almost also always am america an and another any anyone anything are around as ask at away back bad ' +
+    'be because been before being best better between big bill birthday both boy but by call came can cant cat chat check christmas class come computer could ' +
+    'cool cousin dad day dear did didnt do does dog dont down each early easy eat email end enough even ever every everyone everything fast father favorite ' +
+    'few file find fine first for forward friend friends from fun game games get girl give go going gone good got great had happy has have he hello help her ' +
+    'here hey hi him his home hope hour house how i if im in internet into is it its ive just keep kids kind know last late later let like little live lol long look love mail ' +
+    'make man many may maybe me mean message met mom money more morning most mother movie much music my name need never new news next nice night no not now of off ' +
+    'ok old on once one online only or other our out over party people phone please pretty put read really right room said same saw say school see send sent she ' +
+    'should sister sleep so some someone something soon sorry sounds start still stuff sure take talk tell than thank thanks that the their them then there these they thing ' +
+    'things think this those thought time to today tomorrow tonight too tried try two up us use very wait want was watch way we week weekend well went were what when ' +
+    'where which while who why will with wonder work would write wrote yeah year yes yet you your youre aol buddy buddies screen name names web site page pages ' +
+    'download modem sign signed off welcome goodbye ttyl brb gtg thx cya wanna gonna gotta dude awesome sweet totally').split(' ');
+
+  // Files for the Download Manager: [name, kilobytes, where it came from]. Small on purpose, at 28.8k.
+  var DOWNLOADS = [
+    ['smiley.gif', 14, 'GeoCities'], ['hamster.mid', 31, 'Hampster Dance'], ['tetris95.zip', 58, 'Download.com'], ['winamp26.exe', 47, 'Winamp.com'],
+    ['doom_levels.zip', 44, 'id Software'], ['bsb_wallpaper.jpg', 26, 'TRL Fan Page'], ['bonzi.exe', 39, 'Tucows'], ['clippy.wav', 12, 'Microsoft']
+  ];
+
+  var AWAY_PRESETS = [
+    'I am away from my computer right now.',
+    'Be right back. Mom needs the phone.',
+    'Out to lunch. Back in an hour.',
+    'At the mall with SkaterGrl1999. Leave a message!',
+    'Gone to check the mail (the real kind).',
+    'Sleeping. Please do not IM me before noon.',
+    'Downloading a 2 MB file. See you Thursday.'
+  ];
+
   var SIGNS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
   var FORTUNES = [
     'A message from an old friend arrives. Check your mailbox.', 'Your modem connects on the first try today. Celebrate.',
@@ -250,6 +376,7 @@
 
   window.AOLData = {
     CHANNELS: CHANNELS, KEYWORDS: K, KEYWORD_LIST: KEYWORD_LIST, HEADLINES: HEADLINES, starterMail: starterMail,
-    BUDDIES: BUDDIES, BOT: BOT, CHAT: CHAT, SIGNS: SIGNS, FORTUNES: FORTUNES, STOCKS: STOCKS
+    BUDDIES: BUDDIES, BOT: BOT, CHAT: CHAT, SIGNS: SIGNS, FORTUNES: FORTUNES, STOCKS: STOCKS,
+    ROOMS: ROOMS, ROOM_FLAVOR: ROOM_FLAVOR, MEMBERS: MEMBERS, SPELL: SPELL, DOWNLOADS: DOWNLOADS, AWAY_PRESETS: AWAY_PRESETS
   };
 })();

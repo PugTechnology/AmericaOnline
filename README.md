@@ -18,7 +18,7 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 **Sound**
 - Every sound is synthesized live with the Web Audio API: the power switch, fan hum, hard drive spin-up and seeks, floppy stepper, POST beep and Windows chimes.
 - The 17-second dial-up handshake and busy signal are synthesized the same way, as are the Buddy List door sounds and the IM chimes.
-- AOL's voice lines ("Welcome!", "You've got mail!", "Goodbye!") use your browser's speech engine.
+- AOL's voice lines ("Welcome!", "You've got mail!", "Goodbye!") use your browser's speech engine, unless you drop real clips into `sounds/aol/` (see below).
 
 **Windows 98**
 - A real window manager: drag, resize, minimize, maximize, the taskbar and the Start menu with its cascading submenus.
@@ -43,8 +43,20 @@ Everything runs client-side in plain HTML, CSS and JavaScript. There's no build 
 - **Web addresses:** type any web address (e.g. `www.geocities.com`) to open the archived page from the Internet Archive's Wayback Machine. *Internet > Time Travel* picks the year.
 - **Mail:** an Online Mailbox (New, Old and Sent) and Write Mail. Mail to yourself arrives; mail to buddies gets replies.
 - **Buddy List and IMs:** buddies sign on and off with door sounds, and they'll IM you.
-- **People Connection:** the *Town Square - Lobby 42* chat room.
+- **People Connection:** the *Town Square - Lobby 42* chat room, and more below.
 - **Sign Off:** "Goodbye!"
+
+**More AOL**
+- **Idle disconnect:** after 45 idle minutes (change it in Setup, or add `?fastidle` to the URL to try it in seconds), "Are you still there?" counts down and then signs you off.
+- **Away message:** the Buddy List's Away button sets a preset or custom message. Buddies who IM you get it back as an auto-response until you click "I'm Back".
+- **People Connection:** List Rooms shows seven categories with occupancy counts (public rooms hold 23). Each has its own crowd and chatter, and you can Create a Room.
+- **Member Directory:** search fake 1999 profiles by screen name or keyword, then Send IM or Add Buddy.
+- **Buddy List Setup, Warn and Block, Spell Check, Download Manager, Print and Time Online:** all work, more or less. Downloads crawl at 28.8k, the printer is unplugged, and Time Online shows the 1998 pricing.
+- **AOL 4.0 CD:** open drive D: in My Computer for the autorun splash ("1000 hours FREE!") that installs and launches AOL.
+
+## Using the real AOL sounds
+
+The voice lines ("Welcome!", "You've got mail!", "Goodbye!", "File's done!") use your browser's speech engine by default. The genuine AOL clips aren't bundled, because they aren't ours to redistribute. To use them, drop your own files into `sounds/aol/` as `welcome`, `youve-got-mail`, `goodbye`, `files-done`, `im`, `buddy-in` and `buddy-out` (`.mp3` preferred, `.wav` or `.ogg` also work). They're picked up on the next reload, and the mute setting and volume apply to them. Without a file, the IM and door sounds fall back to synthesized ones. See [`sounds/aol/README.md`](sounds/aol/README.md) for the details.
 
 ## Running it
 

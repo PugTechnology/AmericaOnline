@@ -20,7 +20,12 @@
       { label: 'Yahoo!', go: 'web:www.yahoo.com' }, { label: 'CNN Interactive', go: 'web:www.cnn.com' },
       { label: 'Space Jam', go: 'web:www2.warnerbros.com/spacejam/movie/jam.htm' }, { label: 'Weather', go: 'area:weather' }
     ];
-    s.setup = Object.assign({ modemSounds: true, busySignals: true }, s.setup || {});
+    s.setup = Object.assign({ modemSounds: true, busySignals: true, idleMinutes: 45 }, s.setup || {});
+    s.buddyGroups = s.buddyGroups || JSON.parse(JSON.stringify(D.BUDDIES));
+    s.blocked = s.blocked || {};    // screen name -> true
+    s.away = s.away || null;        // { msg, since } while away
+    s.awayMsgs = s.awayMsgs || [];  // your own away messages, newest first
+    s.usage = s.usage || {};        // 'YYYY-MM' -> seconds online
     return s;
   }
   function saveState() {
@@ -39,7 +44,8 @@
   }
   function unreadCount() { return app.sn ? mailbox().inbox.filter(function (m) { return m.unread; }).length : 0; }
 
-  function say(text) { return U.sound('speak', text); }
+  // AOL's voice lines: a drop-in file from sounds/aol/, else the synth sound or speech.
+  function clip(name, text) { return U.sound('clip', name, text); }
 
   function alertBox(text, icon, title) {
     return WM.msgbox({ title: title || 'America Online', owner: app.win, icon: icon || 'info', text: text });
@@ -208,7 +214,8 @@
 
   function openClient(arg) {
 
-    app = { state: loadState(), online: false, sn: null, timers: [], connecting: null };
+    app = { state: loadState(), online: false, sn: null, timers: [], connecting: null, warn: {}, memberRooms: [], downloads: null };
+    U.sound('preloadClips');   // quietly look for real AOL voice files in sounds/aol/
 
     var toolbarSpec = [
       { id: 'read', label: 'Read', icon: 'aol-read', act: function () { area('mailbox'); } },
@@ -222,12 +229,12 @@
         ];
       } },
       { id: 'print', label: 'Print', icon: 'aol-print', menu: function () {
-        return [{ label: 'Print...', action: function () { alertBox('No printer is installed.\n\nTo install a printer, open Printers in My Computer.', 'warning'); } }];
+        return [{ label: 'Print...', action: printDialog }];
       } },
       { id: 'myfiles', label: 'My Files', icon: 'aol-myfiles', menu: function () {
         return [
           { label: 'Personal Filing Cabinet', action: function () { area('mailbox'); } },
-          { label: 'Download Manager', action: function () { alertBox('There are no files waiting to be downloaded.'); } },
+          { label: 'Download Manager', action: function () { area('downloads'); } },
           { label: 'My Documents (C:)', action: function () { Shell.open('C:\\My Documents'); } }
         ];
       } },
@@ -237,6 +244,10 @@
           { label: 'Screen Names', action: function () { area('names'); } },
           { label: 'Parental Controls', action: function () { area('parental'); } },
           { label: 'Buddy List', action: function () { area('buddy'); } },
+          { label: 'Buddy List Setup', action: function () { area('buddysetup'); } },
+          { label: 'Away Message', action: function () { area('buddy'); awayDialog(); } },
+          { label: 'Warn and Block', action: function () { area('warnblock'); } },
+          { label: 'Time Online', action: function () { area('timeonline'); } },
           '-',
           { label: 'Preferences', action: setupDialog }
         ];
@@ -265,7 +276,9 @@
           { label: 'Chat Now', action: function () { area('chat'); } },
           { label: 'Buddy List', icon: 'aol-buddy', action: function () { area('buddy'); } },
           { label: 'Send Instant Message', icon: 'aol-im', action: function () { area('im'); } },
-          { label: 'Member Directory', action: function () { alertBox('Your search found 22,000,000 members. Please narrow your search.'); } }
+          { label: 'Chat Room List', action: function () { area('rooms'); } },
+          { label: 'Create a Room', action: function () { area('createroom'); } },
+          { label: 'Member Directory', action: function () { area('directory'); } }
         ];
       } },
       { id: 'quotes', label: 'Quotes', icon: 'aol-quotes', act: function () { area('quotes'); } },
@@ -363,7 +376,8 @@
         { label: '&New', action: function () { if (app.online) area('write'); else mustSignOn(); } },
         { label: '&Open...', action: function () { Shell.launch('notepad'); } },
         '-',
-        { label: '&Download Manager', action: function () { alertBox('There are no files waiting to be downloaded.'); } },
+        { label: '&Print...', action: printDialog },
+        { label: '&Download Manager', action: function () { area('downloads'); } },
         '-',
         { label: 'E&xit', action: function () { win.close(); } }
       ] },
@@ -372,7 +386,11 @@
         { label: '&Copy', shortcut: 'Ctrl+C', action: function () { document.execCommand('copy'); } },
         { label: '&Paste', shortcut: 'Ctrl+V', action: function () { document.execCommand('paste'); } },
         '-',
-        { label: 'Spell Check', action: function () { alertBox('No misspellings were found. Congratulations!'); } },
+        { label: 'Spell Check', action: function () {
+          var k = app.mdi.active;
+          if (k && k.spell) k.spell();
+          else alertBox('Spell Check checks the message you are writing.\n\nOpen Write Mail and try again.');
+        } },
         { label: 'Dictionary', action: function () { go('www.dictionary.com'); } }
       ] },
       { label: '&Window', items: function () {
@@ -427,13 +445,16 @@
     if (!app) return;
     app.timers.forEach(function (t) { clearTimeout(t); clearInterval(t); });
     app.timers = [];
+    if (app.unIdle) { app.unIdle(); app.unIdle = null; }
+    if (app.idleDlg) app.idleDlg.close(true);
+    app.dlTimer = null; app.dlRunning = false;
   }
   function later(ms, fn) { var t = setTimeout(fn, ms); app.timers.push(t); return t; }
   function every(ms, fn) { var t = setInterval(fn, ms); app.timers.push(t); return t; }
 
   function about() {
     WM.msgbox({ title: 'About America Online', owner: app && app.win, icon: 'aol', sound: null,
-      text: 'America Online for Windows 95/98\nVersion 4.0\n\nThis is a loving re-creation, not the real thing. AOL areas are simulated, and the web is served from the Internet Archive\'s Wayback Machine. The voice uses your computer\'s built-in speech.\n\nSo long, and thanks for all the free hours.' });
+      text: 'America Online for Windows 95/98\nVersion 4.0\n\nThis is a loving re-creation, not the real thing. AOL areas are simulated, and the web is served from the Internet Archive\'s Wayback Machine. The voice lines are files you can drop in, or your computer\'s built-in speech.\n\nSo long, and thanks for all the free hours.' });
   }
 
   // ------------------------------------------------------------------ Sign On
@@ -505,13 +526,16 @@
     var snd = h('input', { type: 'checkbox', checked: s.modemSounds });
     var busy = h('input', { type: 'checkbox', checked: s.busySignals });
     var year = h('select', { className: 'field' }, [1996, 1997, 1998, 1999, 2000, 2001].map(function (y) { return h('option', { value: y, selected: y === Web.year() }, String(y)); }));
+    var idle = h('select', { className: 'field' }, [15, 30, 45, 60, 0].map(function (m) { return h('option', { value: m, selected: m === s.idleMinutes }, m ? m + ' minutes' : 'never'); }));
     var ok = h('button', { className: 'btn default' }, 'OK');
     var cancel = h('button', { className: 'btn' }, 'Cancel');
     var d = WM.dialog({ title: 'America Online Setup', owner: app.win, width: 380, content: h('div', { className: 'aol-setup' }, [
       h('fieldset', { className: 'group' }, [h('legend', null, 'Connection'),
         h('p', null, 'Modem: U.S. Robotics 56K Voice (COM2)'), h('p', null, 'Access number: 1-800-555-0142'),
         h('label', { className: 'check' }, [snd, 'Play the modem sounds while connecting']),
-        h('label', { className: 'check' }, [busy, 'Realistic busy signals (sometimes!)'])
+        h('label', { className: 'check' }, [busy, 'Realistic busy signals (sometimes!)']),
+        h('label', null, ['Disconnect me when idle for ', idle]),
+        h('p', { className: 'note' }, 'Takes effect the next time you sign on.')
       ]),
       h('fieldset', { className: 'group' }, [h('legend', null, 'Time Travel'),
         h('label', null, ['Show me the World Wide Web of ', year]),
@@ -520,7 +544,7 @@
       h('div', { className: 'button-row right' }, [ok, cancel])
     ]) });
     ok.addEventListener('click', function () {
-      s.modemSounds = snd.checked; s.busySignals = busy.checked;
+      s.modemSounds = snd.checked; s.busySignals = busy.checked; s.idleMinutes = +idle.value;
       Web.setYear(+year.value);
       saveState();
       d.close(true);
@@ -646,17 +670,77 @@
     setOnlineUi(true);
     Shell.setAolTray(true);
     app.win.setTitle('America Online - ' + sn);
+    app.state.away = null;
+    app.since = app.usageAt = Date.now();
+    every(30000, tickUsage);
     area('buddy');
     area('welcome');
-    say('Welcome!').then(function () {
+    clip('welcome', 'Welcome!').then(function () {
       if (!app || !app.online) return;
-      if (unreadCount()) return U.wait(250).then(function () { return say("You've got mail!"); });
+      if (unreadCount()) return U.wait(250).then(function () { return clip('youve-got-mail', "You've got mail!"); });
     });
     startBuddySim();
+    startIdleWatch();
   }
 
-  function signOff(exiting) {
+  // ------------------------------------------------------------------ idle disconnect
+  // ?fastidle (or ?fastidle=<seconds>) shortens the wait so it can be tested.
+  var FASTIDLE = /[?&]fastidle(?:=(\d+))?/.exec(location.search);
+
+  function startIdleWatch() {
+    var idleMs = FASTIDLE ? (+FASTIDLE[1] || 8) * 1000 : app.state.setup.idleMinutes * 60000;
+    if (!idleMs) return;
+    app.lastInput = Date.now();
+    var evs = ['pointerdown', 'pointermove', 'keydown', 'wheel'];
+    function poke() { if (app) app.lastInput = Date.now(); }
+    evs.forEach(function (ev) { document.addEventListener(ev, poke, true); });
+    app.unIdle = function () { evs.forEach(function (ev) { document.removeEventListener(ev, poke, true); }); };
+    every(1000, function () {
+      if (app.idleDlg || !app.online) return;
+      if (Date.now() - app.lastInput >= idleMs) areYouThere(FASTIDLE ? 10 : 60);
+    });
+  }
+
+  // The classic "Are you still there?" box, with a countdown.
+  function areYouThere(secs) {
+    var left = secs;
+    var msg = h('div', { className: 'text' });
+    var ok = h('button', { className: 'btn default' }, 'Stay Online');
+    var d = WM.dialog({ title: 'America Online', owner: app.win, width: 340, content: h('div', { className: 'msgbox-wrap' }, [
+      h('div', { className: 'msgbox' }, [U.img('aol-logo', 32), msg]),
+      h('div', { className: 'button-row' }, [ok])
+    ]) });
+    app.idleDlg = d;
+    function text() { msg.textContent = 'Are you still there?\n\nYou have been idle for a while. If you do not respond, you will be disconnected in ' + left + ' second' + (left === 1 ? '' : 's') + '.'; }
+    text();
+    U.sound('chord');
+    var t = every(1000, function () {
+      if (--left > 0) { text(); return; }
+      clearInterval(t);
+      d.close(true);
+      signOff(false, 'idle');
+    });
+    d.on('close', function () { clearInterval(t); if (app) app.idleDlg = null; });
+    ok.addEventListener('click', function () { app.lastInput = Date.now(); d.close(true); });
+    setTimeout(function () { ok.focus(); }, 0);
+  }
+
+  // ------------------------------------------------------------------ time online
+  function usageKey() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  // Add the seconds since the last tick to this month's total.
+  function tickUsage() {
+    if (!app || !app.usageAt) return;
+    var now = Date.now(), k = usageKey();
+    app.state.usage[k] = (app.state.usage[k] || 0) + (now - app.usageAt) / 1000;
+    app.usageAt = now;
+    saveState();
+  }
+
+  function signOff(exiting, reason) {
     if (!app) return;
+    tickUsage();
+    app.state.away = null;
+    saveState();
     stopTimers();
     var wasOnline = app.online;
     app.online = false;
@@ -666,8 +750,9 @@
     Shell.setAolTray(false);
     app.win.setTitle('America Online');
     app.kwInput.value = '';
-    if (wasOnline) { U.sound('doorClose'); say('Goodbye!'); }
+    if (wasOnline) { U.sound('doorClose'); clip('goodbye', 'Goodbye!'); }
     if (!exiting) showSignOn(true).setTitle('Goodbye from America Online!');
+    if (reason === 'idle' && !exiting) alertBox('You have been disconnected from America Online because you were idle.\n\nClick SIGN ON to connect again.', 'warning', 'Disconnected');
   }
 
   // ------------------------------------------------------------------ navigation
@@ -746,7 +831,14 @@
     parental: parentalControls,
     profile: profileWindow,
     names: namesWindow,
-    perks: perksWindow
+    perks: perksWindow,
+    downloads: downloadsWindow,
+    timeonline: timeOnlineWindow,
+    directory: directoryWindow,
+    rooms: roomListWindow,
+    createroom: function () { createRoomDialog(); },
+    buddysetup: buddySetupWindow,
+    warnblock: warnBlockWindow
   };
 
   function area(id, arg, offlineOk) {
@@ -934,13 +1026,16 @@
     body.value = o.body || '';
     [to, cc, subj, body].forEach(function (el) { el.addEventListener('keydown', function (e) { e.stopPropagation(); }); });
     var send = h('button', { className: 'aol-btn big' }, [U.img('aol-write', 16), ' Send Now']);
+    var spell = h('button', { className: 'aol-btn' }, 'Spell Check');
+    spell.addEventListener('click', function () { spellCheck(body); });
     var content = h('div', { className: 'aol-write' }, [
       h('div', { className: 'wm-grid' }, [h('label', null, 'Send To:'), to, h('label', null, 'Copy To:'), cc, h('label', null, 'Subject:'), subj]),
       h('div', { className: 'wm-format' }, ['Arial', '10', 'B', 'I', 'U'].map(function (x) { return h('span', { className: 'wm-fmt' }, x); })),
       body,
-      h('div', { className: 'wm-send' }, [send, h('button', { className: 'aol-btn', disabled: true }, 'Send Later'), h('button', { className: 'aol-btn', disabled: true }, 'Attachments')])
+      h('div', { className: 'wm-send' }, [send, spell, h('button', { className: 'aol-btn', disabled: true }, 'Send Later'), h('button', { className: 'aol-btn', disabled: true }, 'Attachments')])
     ]);
     var kid = app.mdi.open({ title: 'Write Mail', icon: 'aol-write', width: 500, height: 400, content: content });
+    kid.spell = function () { spellCheck(body); };
     send.addEventListener('click', function () {
       var rcpt = to.value.trim();
       if (!rcpt) { alertBox('Please enter a screen name in the "Send To" box.', 'warning'); return; }
@@ -982,30 +1077,71 @@
     mailbox().inbox.push(msg);
     saveState();
     refreshMail();
-    say("You've got mail!");
+    clip('youve-got-mail', "You've got mail!");
   }
 
   // -------------------------------------------- Buddy List / IM
-  function allBuddies() { return [].concat.apply([], Object.keys(D.BUDDIES).map(function (g) { return D.BUDDIES[g]; })); }
+  function groups() { return app.state.buddyGroups; }
+  function allBuddies() { return [].concat.apply([], Object.keys(groups()).map(function (g) { return groups()[g]; })); }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function same(a, b) { return a.toLowerCase() === b.toLowerCase(); }
+  function findBuddy(name) { return allBuddies().filter(function (b) { return same(b, name); })[0] || null; }
+  function memberOf(sn) { return D.MEMBERS.filter(function (m) { return same(m.sn, sn); })[0] || null; }
+  function isBlocked(name) { return !!app.state.blocked[name]; }
+  function validName(n) { return /^[A-Za-z][A-Za-z0-9_ ]{2,15}$/.test(n); }
+  // Buddies are online when the sim says so; directory members come and go by the hour.
+  function isOnline(sn) {
+    var b = findBuddy(sn);
+    if (b) return !!app.onlineBuddies[b];
+    var m = memberOf(sn);
+    if (!m) return false;
+    var n = new Date().getHours();
+    for (var i = 0; i < m.sn.length; i++) n += m.sn.charCodeAt(i);
+    return n % 10 < 7;
+  }
+
+  // A small "type a name" dialog. Resolves with the text, or null if cancelled.
+  function askText(title, label, value, maxlen) {
+    return new Promise(function (resolve) {
+      var input = h('input', { type: 'text', className: 'field', maxlength: maxlen, value: value || '', spellcheck: 'false' });
+      var ok = h('button', { className: 'btn default' }, 'OK');
+      var cancel = h('button', { className: 'btn' }, 'Cancel');
+      var done = false;
+      var d = WM.dialog({ title: title, owner: app.win, width: 340, content: h('div', { className: 'aol-ask' }, [
+        h('label', null, label), input, h('div', { className: 'button-row right' }, [ok, cancel])
+      ]) });
+      function fin(v) { if (done) return; done = true; d.close(true); resolve(v); }
+      ok.addEventListener('click', function () { fin(input.value.trim()); });
+      cancel.addEventListener('click', function () { fin(null); });
+      d.on('close', function () { fin(null); });
+      input.addEventListener('keydown', function (e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') fin(input.value.trim());
+        if (e.key === 'Escape') fin(null);
+      });
+      setTimeout(function () { input.focus(); input.select(); }, 0);
+    });
+  }
 
   function startBuddySim() {
     app.onlineBuddies = {};
-    var all = allBuddies();
-    all.forEach(function (b) { if (Math.random() < 0.45) app.onlineBuddies[b] = true; });
-    app.onlineBuddies.SkaterGrl1999 = true;
+    allBuddies().forEach(function (b) { if (Math.random() < 0.45) app.onlineBuddies[b] = true; });
+    var skater = findBuddy('SkaterGrl1999');
+    if (skater) app.onlineBuddies[skater] = true;
     refreshBuddies();
     // Buddies come and go.
     (function churn() {
       later(20000 + Math.random() * 40000, function () {
+        var all = allBuddies();
+        if (!all.length) { churn(); return; }
         var b = pick(all);
         if (app.onlineBuddies[b]) {
           if (openIm(b, true)) { churn(); return; } // don't leave mid-conversation
           delete app.onlineBuddies[b];
-          U.sound('doorClose');
+          clip('buddy-out');
         } else {
           app.onlineBuddies[b] = true;
-          U.sound('doorOpen');
+          clip('buddy-in');
         }
         refreshBuddies(b);
         churn();
@@ -1014,39 +1150,58 @@
     // Someone says hi.
     (function surprise(first) {
       later(first ? 25000 + Math.random() * 20000 : 120000 + Math.random() * 180000, function () {
-        var online = Object.keys(app.onlineBuddies);
-        var b = online.length ? pick(online) : null;
+        var b = visitor();
         if (b && !openIm(b, true)) incomingIm(b, pick(D.BOT.greet) + ' ' + pick(D.BOT.openers[b] || D.BOT.filler));
         surprise(false);
       });
     })(true);
+  }
+  // An online buddy who hasn't been blocked.
+  function visitor() {
+    var online = Object.keys(app.onlineBuddies).filter(function (b) { return !isBlocked(b); });
+    return online.length ? pick(online) : null;
+  }
+
+  function memberInfo(sn) {
+    var m = memberOf(sn);
+    if (!m) { alertBox('Member Profile: ' + sn + '\n\nThis member has not filled out a profile.', 'info', 'Member Profile'); return; }
+    alertBox('Member Profile: ' + m.sn + '\n\nName: ' + m.name + '\nLocation: ' + m.location + '\nOccupation: ' + m.job + '\nHobbies: ' + m.hobbies + '\nComputers: ' + m.computers + '\nPersonal Quote: "' + m.quote + '"', 'info', 'Member Profile');
   }
 
   function buddyList() {
     var tree = h('div', { className: 'bl-tree sunken-panel' });
     var selected = null;
     function btn(label, icon, fn) { var b = h('button', { className: 'bl-btn' }, [U.img(icon, 16), h('span', null, label)]); b.addEventListener('click', fn); return b; }
+    var status = h('div', null, 'Buddy List');
+    var head = h('div', { className: 'bl-head' }, [U.img('aol-buddy', 32), h('div', null, [h('b', null, app.sn), status])]);
+    var awayBtn = btn('Away', 'aol-buddy', function () { if (app.state.away) imBack(); else awayDialog(); });
     var content = h('div', { className: 'aol-buddy' }, [
-      h('div', { className: 'bl-head' }, [U.img('aol-buddy', 32), h('div', null, [h('b', null, app.sn), h('div', null, 'Buddy List')])]),
+      head,
       tree,
       h('div', { className: 'bl-buttons' }, [
         btn('IM', 'aol-im', function () { if (selected && app.onlineBuddies[selected]) openIm(selected); else sendImDialog(selected); }),
-        btn('Info', 'info', function () {
-          if (!selected) return;
-          alertBox('Member Profile: ' + selected + '\n\nLocation: ' + pick(['Ohio', 'Cleveland', 'the Internet', 'my room', 'Tampa, FL', 'Portland']) + '\nHobbies: ' + pick(['skateboarding, AOL, music', 'DOOM, Quake, StarCraft', 'surfing the web', 'Beanie Babies', 'chatting!!!']) + '\nPersonal Quote: "' + pick(['Carpe diem', 'Whatever!', 'Talk to the hand', 'Party like its 1999', 'I want to believe']) + '"', 'info', 'Member Profile');
-        }),
-        btn('Setup', 'settings', function () { alertBox('Buddy List Setup\n\nYour groups: Buddies, Family, Co-Workers.\n\nTo add a buddy, ask them for their screen name at school tomorrow.'); }),
-        btn('Chat', 'aol-chat', function () { area('chat'); })
+        btn('Info', 'info', function () { if (selected) memberInfo(selected); }),
+        btn('Setup', 'settings', function () { area('buddysetup'); }),
+        btn('Chat', 'aol-chat', function () { area('chat'); }),
+        awayBtn,
+        btn('Warn', 'warning', function () { area('warnblock', selected); })
       ])
     ]);
-    var kid = app.mdi.open({ kind: 'buddy', title: 'Buddy List Online', icon: 'aol-buddy', width: 190, height: 380, x: 'right', y: 8, content: content, className: 'aol-buddywin' });
+    var kid = app.mdi.open({ kind: 'buddy', title: 'Buddy List Online', icon: 'aol-buddy', width: 190, height: 410, x: 'right', y: 8, content: content, className: 'aol-buddywin' });
     kid.refresh = function (flash) {
+      var away = app.state.away;
+      var title = away ? 'Buddy List (Away)' : 'Buddy List Online';
+      if (kid.title !== title) kid.setTitle(title);
+      status.textContent = away ? 'Away: ' + away.msg : 'Buddy List';
+      head.classList.toggle('away', !!away);
+      awayBtn.querySelector('span').textContent = away ? "I'm Back" : 'Away';
       tree.innerHTML = '';
-      Object.keys(D.BUDDIES).forEach(function (g) {
-        var names = D.BUDDIES[g], on = names.filter(function (n) { return app.onlineBuddies && app.onlineBuddies[n]; });
+      Object.keys(groups()).forEach(function (g) {
+        var names = groups()[g], on = names.filter(function (n) { return app.onlineBuddies && app.onlineBuddies[n]; });
         tree.appendChild(h('div', { className: 'bl-group' }, g + ' (' + on.length + '/' + names.length + ')'));
         on.forEach(function (n) {
-          var row = h('div', { className: 'bl-buddy' + (n === selected ? ' selected' : '') + (n === flash ? ' flash' : '') }, n);
+          var lv = app.warn[n];
+          var row = h('div', { className: 'bl-buddy' + (n === selected ? ' selected' : '') + (n === flash ? ' flash' : '') + (isBlocked(n) ? ' blocked' : ''), title: lv ? 'Warning level: ' + lv + '%' : null }, n + (isBlocked(n) ? ' (blocked)' : ''));
           row.addEventListener('click', function () { selected = n; kid.refresh(); });
           U.onActivate(row, function () { openIm(n); });
           tree.appendChild(row);
@@ -1057,6 +1212,214 @@
     return kid;
   }
   function refreshBuddies(flash) { var b = app && app.mdi.find('buddy'); if (b) b.refresh(flash); }
+
+  // -------------------------------------------- Away message
+  function awayDialog() {
+    var s = app.state, away = s.away;
+    var presets = s.awayMsgs.concat(D.AWAY_PRESETS);
+    var list = h('select', { className: 'field', size: 6 }, presets.map(function (m, i) { return h('option', { value: i }, m); }));
+    var text = h('textarea', { className: 'im-compose away-text', maxlength: 200 });
+    text.value = away ? away.msg : presets[0];
+    list.addEventListener('change', function () { text.value = presets[+list.value]; });
+    text.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    var ok = h('button', { className: 'btn default' }, "I'm Away");
+    var back = h('button', { className: 'btn' }, "I'm Back");
+    var cancel = h('button', { className: 'btn' }, 'Cancel');
+    var d = WM.dialog({ title: 'Set Away Message', owner: app.win, width: 380, content: h('div', { className: 'aol-away' }, [
+      h('label', null, 'Pick a message, or write your own:'), list,
+      h('label', null, 'Your Away Message:'), text,
+      h('p', { className: 'note' }, 'Buddies who IM you while you are away get this message back automatically.'),
+      h('div', { className: 'button-row right' }, away ? [ok, back, cancel] : [ok, cancel])
+    ]) });
+    ok.addEventListener('click', function () {
+      var msg = text.value.trim();
+      if (!msg) { alertBox('Please type an away message.', 'warning'); return; }
+      d.close(true);
+      setAway(msg);
+    });
+    back.addEventListener('click', function () { d.close(true); imBack(); });
+    cancel.addEventListener('click', function () { d.close(true); });
+    setTimeout(function () { text.focus(); text.select(); }, 0);
+  }
+
+  function setAway(msg) {
+    var s = app.state;
+    s.away = { msg: msg, since: Date.now() };
+    if (D.AWAY_PRESETS.indexOf(msg) === -1 && s.awayMsgs.indexOf(msg) === -1) s.awayMsgs = [msg].concat(s.awayMsgs).slice(0, 5);
+    saveState();
+    refreshBuddies();
+    // Somebody always notices.
+    later(9000 + Math.random() * 6000, function () {
+      var b = s.away && visitor();
+      if (b) incomingIm(b, pick(D.BOT.greet) + ' ' + pick(D.BOT.openers[b] || D.BOT.filler));
+    });
+  }
+
+  function imBack() {
+    var s = app.state, away = s.away;
+    if (!away) return;
+    s.away = null;
+    saveState();
+    refreshBuddies();
+    var mins = Math.max(1, Math.round((Date.now() - away.since) / 60000));
+    alertBox('Welcome back, ' + app.sn + '!\n\nYou were away for ' + mins + ' minute' + (mins === 1 ? '' : 's') + '.', 'info');
+  }
+
+  // -------------------------------------------- Buddy List Setup
+  function buddySetupWindow() {
+    var tree = h('div', { className: 'bl-tree sunken-panel' });
+    var sel = { g: null, b: null };
+    function btn(label, fn) { var b = h('button', { className: 'aol-btn' }, label); b.addEventListener('click', fn); return b; }
+    function render() {
+      tree.innerHTML = '';
+      Object.keys(groups()).forEach(function (g) {
+        var grp = h('div', { className: 'bl-group' + (sel.g === g && !sel.b ? ' selected' : '') }, g + ' (' + groups()[g].length + ')');
+        grp.addEventListener('click', function () { sel = { g: g, b: null }; render(); });
+        tree.appendChild(grp);
+        groups()[g].forEach(function (n) {
+          var row = h('div', { className: 'bl-buddy' + (sel.b === n ? ' selected' : '') }, n);
+          row.addEventListener('click', function () { sel = { g: g, b: n }; render(); });
+          tree.appendChild(row);
+        });
+      });
+    }
+    function changed() { saveState(); refreshBuddies(); refreshWarnBlock(); render(); }
+    function addBuddy() {
+      var gs = Object.keys(groups());
+      if (!gs.length) { alertBox('Create a group first, then add buddies to it.', 'info'); return; }
+      var g = sel.g && groups()[sel.g] ? sel.g : gs[0];
+      askText('Add Buddy', 'Screen name to add to "' + g + '":', '', 16).then(function (n) {
+        if (n == null) return;
+        n = n.replace(/\s+/g, ' ');
+        if (!validName(n)) { alertBox('"' + n + '" is not a valid screen name.\n\nScreen names are 3 to 16 characters, start with a letter and use letters, numbers and spaces.', 'warning'); return; }
+        if (findBuddy(n)) { alertBox(n + ' is already on your Buddy List.', 'info'); return; }
+        groups()[g].push(n);
+        if (Math.random() < 0.6) app.onlineBuddies[n] = true;
+        sel = { g: g, b: n };
+        changed();
+      });
+    }
+    function addGroup() {
+      askText('Create Group', 'Name for the new group:', '', 20).then(function (n) {
+        if (n == null) return;
+        if (!n) { alertBox('Please type a group name.', 'warning'); return; }
+        if (Object.keys(groups()).some(function (g) { return same(g, n); })) { alertBox('You already have a group named "' + n + '".', 'info'); return; }
+        groups()[n] = [];
+        sel = { g: n, b: null };
+        changed();
+      });
+    }
+    function remove() {
+      if (sel.b) {
+        var arr = groups()[sel.g];
+        arr.splice(arr.indexOf(sel.b), 1);
+        delete app.onlineBuddies[sel.b];
+        sel.b = null;
+        changed();
+      } else if (sel.g && groups()[sel.g]) {
+        var g = sel.g, n = groups()[g].length;
+        var go = n ? WM.msgbox({ title: 'Delete Group', owner: app.win, icon: 'question', buttons: ['&Yes', '&No'], text: 'Delete the group "' + g + '" and its ' + n + ' buddies?' }) : Promise.resolve('&Yes');
+        go.then(function (b) {
+          if (b !== '&Yes') return;
+          groups()[g].forEach(function (x) { delete app.onlineBuddies[x]; });
+          delete groups()[g];
+          sel = { g: null, b: null };
+          changed();
+        });
+      } else alertBox('Click a buddy or a group first.', 'info');
+    }
+    render();
+    return app.mdi.open({ kind: 'buddysetup', title: 'Buddy List Setup', icon: 'aol-buddy', width: 270, height: 340, x: 60, y: 30, content: h('div', { className: 'aol-buddy' }, [
+      h('p', { className: 'bs-help' }, 'Create groups and add the screen names of your friends. Click a name and choose Remove to delete it.'),
+      tree,
+      h('div', { className: 'mb-buttons bs-buttons' }, [btn('Add Buddy', addBuddy), btn('Create Group', addGroup), btn('Remove', remove)])
+    ]) });
+  }
+
+  // -------------------------------------------- Warn and Block
+  function warnBlockWindow(prefill) {
+    var ex = app.mdi.find('warnblock');
+    if (ex) { ex.focus(); if (prefill) ex.setName(prefill); return ex; }
+    var input = h('input', { type: 'text', className: 'field', value: prefill || '', spellcheck: 'false' });
+    var table = h('table', { className: 'list-table' });
+    var bar = h('i', { style: { width: '0%' } });
+    var level = h('span', null, '0%');
+    input.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    input.addEventListener('input', function () { meter(); });
+    function meter() { var lv = app.warn[input.value.trim()] || 0; bar.style.width = lv + '%'; level.textContent = lv + '%'; }
+    function names() {
+      var seen = {};
+      return allBuddies().concat(Object.keys(app.state.blocked)).filter(function (n) { if (seen[n]) return false; seen[n] = true; return true; });
+    }
+    function render() {
+      table.innerHTML = '';
+      table.appendChild(h('tr', null, [h('th', { style: { width: '100%' } }, 'Screen Name'), h('th', null, 'Warning'), h('th', null, 'IMs')]));
+      names().forEach(function (n) {
+        var tr = h('tr', { className: same(n, input.value.trim()) ? 'selected' : '' }, [h('td', null, n), h('td', null, (app.warn[n] || 0) + '%'), h('td', null, isBlocked(n) ? 'Blocked' : 'Allowed')]);
+        tr.addEventListener('click', function () { input.value = n; kid.refresh(); });
+        table.appendChild(tr);
+      });
+      meter();
+    }
+    function target() {
+      var n = input.value.trim().replace(/\s+/g, ' ');
+      if (!validName(n)) { alertBox('Please enter a valid screen name, or click one in the list.', 'warning'); return null; }
+      return findBuddy(n) || n;
+    }
+    function btn(label, fn) { var b = h('button', { className: 'aol-btn' }, label); b.addEventListener('click', fn); return b; }
+    var kid = app.mdi.open({ kind: 'warnblock', title: 'Warn and Block', icon: 'aol-buddy', width: 340, height: 340, x: 40, y: 20, content: h('div', { className: 'aol-warn' }, [
+      h('p', null, 'Warning tells AOL a member is bothering you. Blocking stops their Instant Messages completely.'),
+      h('div', { className: 'so-row' }, [h('label', null, 'Screen Name:'), input]),
+      h('div', { className: 'sunken-panel wb-list' }, table),
+      h('div', { className: 'wb-level' }, [h('span', null, 'Warning level:'), h('div', { className: 'dl-bar' }, bar), level]),
+      h('div', { className: 'mb-buttons' }, [
+        btn('Warn', function () { var n = target(); if (n) warnDialog(n); }),
+        btn('Block', function () { var n = target(); if (n && !isBlocked(n)) toggleBlock(n); else if (n) alertBox(n + ' is already blocked.', 'info'); }),
+        btn('Unblock', function () { var n = target(); if (n && isBlocked(n)) toggleBlock(n); else if (n) alertBox(n + ' is not blocked.', 'info'); })
+      ])
+    ]) });
+    kid.refresh = render;
+    kid.setName = function (n) { input.value = n; render(); };
+    render();
+    return kid;
+  }
+  function refreshWarnBlock() { var w = app && app.mdi.find('warnblock'); if (w) w.refresh(); }
+
+  function warnDialog(name) {
+    var warn = h('button', { className: 'btn default' }, 'Warn');
+    var anon = h('button', { className: 'btn' }, 'Warn Anonymously');
+    var cancel = h('button', { className: 'btn' }, 'Cancel');
+    var d = WM.dialog({ title: 'Warn ' + name, owner: app.win, width: 380, content: h('div', { className: 'msgbox-wrap' }, [
+      h('div', { className: 'msgbox' }, [U.img('warning', 32), h('div', { className: 'text' }, 'Warning ' + name + ' tells AOL this member is sending you unwanted messages.\n\nA warning raises their warning level by 10% (5% if you stay anonymous). Warn only members who are really bothering you.')]),
+      h('div', { className: 'button-row' }, [warn, anon, cancel])
+    ]) });
+    warn.addEventListener('click', function () { d.close(true); doWarn(name, 10); });
+    anon.addEventListener('click', function () { d.close(true); doWarn(name, 5); });
+    cancel.addEventListener('click', function () { d.close(true); });
+  }
+  function doWarn(name, pts) {
+    var lv = Math.min(100, (app.warn[name] || 0) + pts);
+    app.warn[name] = lv;
+    var w = app.mdi.find('im:' + name);
+    if (w && lv < 100) w.add(name, pick(['omg why did u warn me', 'ur so mean!!', 'i was just kidding lol', 'this is so unfair']), false);
+    if (lv >= 100) {
+      delete app.onlineBuddies[name];
+      if (w) w.add('AOL', name + ' has been disconnected for exceeding the warning limit.', false, 'sys');
+      alertBox(name + '\'s warning level has reached 100%.\n\nThey have been signed off America Online. Nicely done.', 'info');
+    } else {
+      alertBox('You have warned ' + name + '. Their warning level is now ' + lv + '%.\n\n(Was that really necessary?)', 'info');
+    }
+    refreshBuddies(); refreshWarnBlock();
+  }
+  function toggleBlock(name) {
+    var b = app.state.blocked;
+    if (b[name]) delete b[name]; else b[name] = true;
+    saveState();
+    var w = app.mdi.find('im:' + name);
+    if (w) w.add('AOL', b[name] ? 'You have blocked ' + name + '.' : name + ' has been unblocked.', false, 'sys');
+    refreshBuddies(); refreshWarnBlock();
+    alertBox(b[name] ? 'You have blocked ' + name + '.\n\nThey can no longer send you Instant Messages.' : name + ' has been unblocked.', 'info');
+  }
 
   function sendImDialog(prefill) {
     var to = h('input', { type: 'text', className: 'field', value: prefill || '', spellcheck: 'false' });
@@ -1069,13 +1432,13 @@
     send.addEventListener('click', function () {
       var name = to.value.trim(), text = msg.value.trim();
       if (!name) { alertBox('Please enter a screen name.', 'warning'); return; }
-      var buddy = allBuddies().filter(function (b) { return b.toLowerCase() === name.toLowerCase(); })[0];
-      if (!buddy || !app.onlineBuddies[buddy]) {
+      var who = findBuddy(name) || (memberOf(name) || {}).sn;
+      if (!who || !isOnline(who)) {
         alertBox(name + ' is not currently signed on.', 'info');
         return;
       }
       kid.close(true);
-      var w = openIm(buddy);
+      var w = openIm(who);
       if (text) w.send(text);
     });
     setTimeout(function () { (prefill ? msg : to).focus(); }, 0);
@@ -1090,17 +1453,18 @@
     var input = h('textarea', { className: 'im-compose', placeholder: '' });
     var send = h('button', { className: 'aol-btn big' }, 'Send');
     var content = h('div', { className: 'aol-im' }, [log, h('div', { className: 'im-toolbar' }, ['A', 'A', 'B', 'I', 'U', ':-)'].map(function (x) { return h('span', { className: 'wm-fmt' }, x); })), input,
-      h('div', { className: 'mb-buttons' }, [h('button', { className: 'aol-btn', onclick: function () { alertBox('You warned ' + name + '. Their warning level is now 10%.\n\n(Was that really necessary?)'); } }, 'Warn'),
-        h('button', { className: 'aol-btn', onclick: function () { alertBox(name + ' has been blocked. Just kidding.'); } }, 'Block'), send])]);
+      h('div', { className: 'mb-buttons' }, [h('button', { className: 'aol-btn', onclick: function () { warnDialog(name); } }, 'Warn'),
+        h('button', { className: 'aol-btn', onclick: function () { toggleBlock(name); } }, 'Block'), send])]);
     kid = app.mdi.open({ kind: 'im:' + name, title: 'Instant Message To: ' + name, icon: 'aol-im', width: 360, height: 300, content: content, className: 'aol-imwin' });
     kid.buddy = name;
-    kid.add = function (who, text, mine) {
-      log.appendChild(h('div', { className: 'im-line' }, [h('b', { className: mine ? 'me' : 'them' }, who + ': '), text]));
+    kid.add = function (who, text, mine, cls) {
+      log.appendChild(h('div', { className: 'im-line' + (cls ? ' ' + cls : '') }, [h('b', { className: mine ? 'me' : 'them' }, who + ': '), text]));
       log.scrollTop = log.scrollHeight;
     };
     kid.send = function (text) {
       kid.add(app.sn, text, true);
       U.sound('imSend');
+      if (isBlocked(name)) { kid.add('AOL', 'You have blocked ' + name + ', so they will not see this message.', false, 'sys'); return; }
       botReply(kid, text);
     };
     send.addEventListener('click', function () {
@@ -1119,10 +1483,21 @@
   }
 
   function incomingIm(name, text) {
+    if (isBlocked(name)) return;
     var kid = openIm(name);
     kid.setTitle('Instant Message From: ' + name);
-    kid.add(name, text, false);
-    U.sound('imReceive');
+    kid.add(name, text.replace('{me}', app.sn), false);
+    clip('im');
+    // While you're away, they get your away message back, once per away spell.
+    var away = app.state.away;
+    if (away && kid.awaySince !== away.since) {
+      kid.awaySince = away.since;
+      later(900, function () {
+        if (kid.closed) return;
+        kid.add(app.sn + ' (Auto Response)', away.msg, true, 'auto');
+        U.sound('imSend');
+      });
+    }
   }
 
   function botReply(kid, text) {
@@ -1134,52 +1509,164 @@
     later(1200 + Math.random() * 2600, function () {
       if (kid.closed || !app.online) return;
       kid.add(name, reply, false);
-      U.sound('imReceive');
+      clip('im');
       if (!bye && Math.random() < 0.35) later(2500 + Math.random() * 3000, function () {
         if (kid.closed || !app.online) return;
         kid.add(name, pick(D.BOT.openers[name] || D.BOT.filler).replace('{me}', app.sn), false);
-        U.sound('imReceive');
+        clip('im');
       });
     });
   }
 
+  // -------------------------------------------- Member Directory
+  function directoryWindow() {
+    var q = h('input', { type: 'text', className: 'field', placeholder: 'screen name or keyword', spellcheck: 'false' });
+    var find = h('button', { className: 'aol-btn big' }, 'Search');
+    var table = h('table', { className: 'list-table' });
+    var detail = h('div', { className: 'dir-detail sunken-panel' }, 'Search for a member by screen name, or by anything in their profile. Try: Ohio, skateboarding, DOOM, Beanie Babies.');
+    var count = h('span', { className: 'mb-count' });
+    var imBtn = h('button', { className: 'aol-btn', disabled: true }, 'Send IM');
+    var addBtn = h('button', { className: 'aol-btn', disabled: true }, 'Add Buddy');
+    var results = [], cur = null;
+    function row(label, value) { return h('div', null, [h('b', null, label + ' '), value]); }
+    function show(m) {
+      cur = m;
+      imBtn.disabled = addBtn.disabled = !m;
+      detail.innerHTML = '';
+      U.append(detail, [
+        h('div', { className: 'dir-sn' }, [h('b', null, m.sn), isOnline(m.sn) ? ' (online)' : ' (not signed on)']),
+        row('Name:', m.name), row('Location:', m.location), row('Occupation:', m.job), row('Hobbies:', m.hobbies), row('Computers:', m.computers), row('Quote:', '"' + m.quote + '"')
+      ]);
+    }
+    function search() {
+      var text = q.value.trim().toLowerCase();
+      if (!text) { alertBox('Your search found 22,000,000 members.\n\nPlease narrow your search.', 'info'); return; }
+      var words = text.split(/\s+/);
+      results = D.MEMBERS.filter(function (m) {
+        var hay = [m.sn, m.name, m.location, m.hobbies, m.quote, m.computers, m.job].join(' ').toLowerCase();
+        return words.every(function (w) { return hay.indexOf(w) !== -1; });
+      });
+      cur = null; imBtn.disabled = addBtn.disabled = true;
+      table.innerHTML = '';
+      table.appendChild(h('tr', null, [h('th', null, 'Screen Name'), h('th', null, 'Name'), h('th', { style: { width: '100%' } }, 'Location')]));
+      results.forEach(function (m) {
+        var tr = h('tr', null, [h('td', null, m.sn), h('td', null, m.name), h('td', null, m.location)]);
+        tr.addEventListener('click', function () { table.querySelectorAll('tr').forEach(function (r) { r.classList.remove('selected'); }); tr.classList.add('selected'); show(m); });
+        U.onActivate(tr, function () { show(m); sendIm(); });
+        table.appendChild(tr);
+      });
+      count.textContent = results.length ? 'Your search found ' + results.length + ' member' + (results.length === 1 ? '' : 's') + '.' : 'No members matched "' + q.value.trim() + '". Try a different keyword.';
+      detail.textContent = results.length ? 'Click a member to see the profile.' : '';
+    }
+    function sendIm() {
+      if (!cur) return;
+      if (!isOnline(cur.sn)) { alertBox(cur.sn + ' is not currently signed on.', 'info'); return; }
+      var fresh = !app.mdi.find('im:' + cur.sn), sn = cur.sn;
+      var w = openIm(sn);
+      if (fresh) later(1500, function () { if (!w.closed && !isBlocked(sn)) { w.add(sn, pick(D.BOT.greet).replace('{me}', app.sn) + ' ' + pick(D.BOT.openers[sn] || D.BOT.filler), false); clip('im'); } });
+    }
+    function addBuddy() {
+      if (!cur) return;
+      if (findBuddy(cur.sn)) { alertBox(cur.sn + ' is already on your Buddy List.', 'info'); return; }
+      var g = Object.keys(groups())[0];
+      if (!g) { g = 'Buddies'; groups()[g] = []; }
+      groups()[g].push(cur.sn);
+      if (isOnline(cur.sn)) app.onlineBuddies[cur.sn] = true;
+      saveState(); refreshBuddies();
+      alertBox(cur.sn + ' has been added to "' + g + '" on your Buddy List.', 'info');
+    }
+    find.addEventListener('click', search);
+    imBtn.addEventListener('click', sendIm);
+    addBtn.addEventListener('click', addBuddy);
+    q.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') search(); });
+    var kid = app.mdi.open({ kind: 'directory', title: 'Member Directory', icon: 'aol-people', width: 460, height: 440, content: h('div', { className: 'aol-dir' }, [
+      h('div', { className: 'dir-top' }, [h('label', null, 'Search for:'), q, find]),
+      h('div', { className: 'sunken-panel dir-list' }, table), count, detail,
+      h('div', { className: 'mb-buttons' }, [imBtn, addBtn])
+    ]) });
+    setTimeout(function () { q.focus(); }, 0);
+    return kid;
+  }
+
   // -------------------------------------------- Chat
-  function chatRoom() {
+  var CHAT_MAX = 23;   // public rooms hold 23 people, like the real ones
+  var NAME_A = ['Jenny', 'Mikey', 'Sammy', 'Chrissy', 'Davey', 'Katie', 'Robbie', 'Tommy', 'Lizzy', 'Andy'];
+  var NAME_B = ['82', '99', '_OH', '1977', 'xx', '2000', '_FL', '4ever'];
+  function fakeName() { return pick(NAME_A) + pick(NAME_B); }
+
+  function findRoom(id) {
+    var r = null;
+    D.ROOMS.forEach(function (c) { c.rooms.forEach(function (x) { if (x.id === id) r = { room: x, cat: c.id }; }); });
+    app.memberRooms.forEach(function (x) { if (x.id === id) r = { room: x, cat: 'member' }; });
+    return r;
+  }
+  // People in a room right now: a base that drifts a little through the hour.
+  function roomCount(r) {
+    if (r.member) return r.here || 0;
+    var n = 0;
+    for (var i = 0; i < r.id.length; i++) n += r.id.charCodeAt(i);
+    return U.clamp(r.base + (Math.floor(Date.now() / 60000) + n) % 5 - 2, 1, CHAT_MAX);
+  }
+  function roomCast(flavor, n) {
+    var here = flavor.people.slice().sort(function () { return Math.random() - 0.5; }).slice(0, n);
+    while (here.length < n) { var nm = fakeName(); if (here.indexOf(nm) === -1) here.push(nm); }
+    return here;
+  }
+
+  function chatRoom(id) {
+    var ex = app.mdi.find('chat');
+    if (ex) { ex.focus(); if (id) ex.join(id); return ex; }
     var log = h('div', { className: 'chat-log sunken-panel' });
     var people = h('div', { className: 'chat-people sunken-panel' });
     var count = h('div', { className: 'chat-count' });
     var input = h('input', { type: 'text', className: 'field chat-input', maxlength: 92, spellcheck: 'false' });
     var send = h('button', { className: 'aol-btn big' }, 'Send');
-    var here = D.CHAT.people.slice(0, 5 + Math.floor(Math.random() * 3));
+    var here = [], room = null, flavor = null, lines = [];
     var content = h('div', { className: 'aol-chat' }, [
       h('div', { className: 'chat-main' }, [log, h('div', { className: 'chat-send' }, [input, send])]),
       h('div', { className: 'chat-side' }, [count, people,
-        h('button', { className: 'aol-btn', onclick: function () { alertBox('There are 312 public rooms in Town Square, Arts & Entertainment, Friends, Life, Places, Romance, Special Interests...\n\nThis one is the best, obviously.'); } }, 'List Rooms')])
+        h('button', { className: 'aol-btn', onclick: function () { area('rooms'); } }, 'List Rooms'),
+        h('button', { className: 'aol-btn', onclick: function () { area('createroom'); } }, 'Create a Room')])
     ]);
     var kid = app.mdi.open({ kind: 'chat', title: D.CHAT.room, icon: 'aol-chat', width: 560, height: 360, content: content });
     function renderPeople() {
       people.innerHTML = '';
       [app.sn].concat(here).forEach(function (p) { people.appendChild(h('div', null, p)); });
       count.textContent = 'People Here: ' + (here.length + 1);
+      if (room && room.member) room.here = here.length + 1;
     }
     function line(who, text, cls) {
-      log.appendChild(h('div', { className: 'chat-line ' + (cls || '') }, [h('b', null, who + ':'), '\u00a0\u00a0' + text]));
+      log.appendChild(h('div', { className: 'chat-line ' + (cls || '') }, [h('b', null, who + ':'), '  ' + text]));
       while (log.children.length > 200) log.removeChild(log.firstChild);
       log.scrollTop = log.scrollHeight;
     }
-    line('OnlineHost', '*** You are in "' + D.CHAT.room + '". ***', 'host');
-    renderPeople();
+    // Switch to another room, with its own cast and chatter.
+    kid.join = function (rid, quiet) {
+      var f = findRoom(rid);
+      if (!f) return;
+      room = f.room; flavor = D.ROOM_FLAVOR[f.cat];
+      lines = flavor.lines.concat(room.lines || []);
+      here = room.member ? [] : roomCast(flavor, roomCount(room) - 1);
+      log.innerHTML = '';
+      kid.setTitle(room.name);
+      line('OnlineHost', '*** You are in "' + room.name + '". ***', 'host');
+      if (room.member) line('OnlineHost', 'You are the first one here. Others will wander in soon.', 'host');
+      renderPeople();
+      if (!quiet) U.sound('doorOpen');
+    };
+    kid.join(id || 'lobby42', true);
     var timer = every(3500, function () {
       if (kid.closed) return;
       var r = Math.random();
-      if (r < 0.08 && here.length > 4) {
+      if (r < 0.08 && here.length > (room.member ? 0 : 4)) {
         var gone = here.splice(Math.floor(Math.random() * here.length), 1)[0];
         line('OnlineHost', gone + ' has left the room.', 'host'); renderPeople();
-      } else if (r < 0.16) {
-        var outside = D.CHAT.people.filter(function (p) { return here.indexOf(p) === -1; });
-        if (outside.length) { var p = pick(outside); here.push(p); line('OnlineHost', p + ' has entered the room.', 'host'); renderPeople(); }
-      } else if (r < 0.7) {
-        line(pick(here), pick(D.CHAT.lines));
+      } else if (r < (room.member && here.length < 3 ? 0.4 : 0.16)) {
+        var outside = flavor.people.filter(function (p) { return here.indexOf(p) === -1; });
+        var p = outside.length ? pick(outside) : fakeName();
+        if (here.length < CHAT_MAX - 1 && here.indexOf(p) === -1) { here.push(p); line('OnlineHost', p + ' has entered the room.', 'host'); renderPeople(); }
+      } else if (r < 0.7 && here.length) {
+        line(pick(here), pick(lines));
       }
     });
     function post() {
@@ -1187,8 +1674,8 @@
       if (!t) return;
       input.value = '';
       line(app.sn, t, 'me');
-      if (Math.random() < 0.6) later(1500 + Math.random() * 3000, function () {
-        if (kid.closed) return;
+      if (here.length && Math.random() < 0.6) later(1500 + Math.random() * 3000, function () {
+        if (kid.closed || !here.length) return;
         line(pick(here), pick([app.sn + ' lol', 'hi ' + app.sn + '!!', 'wb ' + app.sn, 'lol ' + app.sn, app.sn + ' where r u from?', 'agreed', 'LOL']));
       });
     }
@@ -1198,6 +1685,87 @@
     kid.on('focus', function () { setTimeout(function () { input.focus(); }, 0); });
     setTimeout(function () { input.focus(); }, 0);
     return kid;
+  }
+
+  // The categorized room list.
+  function roomListWindow() {
+    var cur = D.ROOMS[0].id, selected = null;
+    var catList = h('div', { className: 'rl-cats sunken-panel' });
+    var table = h('table', { className: 'list-table' });
+    function categories() {
+      var pub = app.memberRooms.filter(function (r) { return !r.priv; });
+      return D.ROOMS.concat(pub.length ? [{ id: 'member', name: 'Member Rooms', rooms: pub }] : []);
+    }
+    function go() {
+      if (!selected) { alertBox('Click a room first, then click Go.', 'info'); return; }
+      joinRoom(selected);
+    }
+    function render() {
+      selected = null;
+      var cats = categories();
+      catList.innerHTML = '';
+      cats.forEach(function (c) {
+        var row = h('div', { className: 'kwl-row' + (c.id === cur ? ' selected' : '') }, c.name);
+        row.addEventListener('click', function () { cur = c.id; render(); });
+        catList.appendChild(row);
+      });
+      var c = cats.filter(function (x) { return x.id === cur; })[0] || cats[0];
+      table.innerHTML = '';
+      table.appendChild(h('tr', null, [h('th', { style: { width: '100%' } }, 'Room Name'), h('th', null, 'People')]));
+      c.rooms.forEach(function (r) {
+        var n = roomCount(r);
+        var tr = h('tr', null, [h('td', null, r.name), h('td', null, !r.member && n >= CHAT_MAX ? n + ' (full)' : String(n))]);
+        tr.addEventListener('click', function () { table.querySelectorAll('tr').forEach(function (x) { x.classList.remove('selected'); }); tr.classList.add('selected'); selected = r; });
+        U.onActivate(tr, function () { selected = r; go(); });
+        table.appendChild(tr);
+      });
+    }
+    function btn(label, fn) { var b = h('button', { className: 'aol-btn' }, label); b.addEventListener('click', fn); return b; }
+    var kid = app.mdi.open({ kind: 'rooms', title: 'List Rooms', icon: 'aol-chat', width: 470, height: 320, content: h('div', { className: 'aol-rooms' }, [
+      h('div', { className: 'rl-body' }, [catList, h('div', { className: 'sunken-panel rl-rooms' }, table)]),
+      h('div', { className: 'mb-buttons' }, [btn('Go', go), btn('Create a Room', function () { createRoomDialog(); }), btn('Refresh', render)])
+    ]) });
+    kid.refresh = render;
+    render();
+    return kid;
+  }
+
+  function joinRoom(r) {
+    if (!r.member && roomCount(r) >= CHAT_MAX) {
+      alertBox('Sorry, "' + r.name + '" is full.\n\nPublic rooms hold ' + CHAT_MAX + ' people. Try another room, or create your own.', 'warning', 'People Connection');
+      return;
+    }
+    area('chat', r.id);
+  }
+
+  function createRoomDialog() {
+    var input = h('input', { type: 'text', className: 'field', maxlength: 20, spellcheck: 'false' });
+    var priv = h('input', { type: 'checkbox' });
+    var err = h('div', { className: 'aol-err' });
+    var ok = h('button', { className: 'btn default' }, 'Create');
+    var cancel = h('button', { className: 'btn' }, 'Cancel');
+    var d = WM.dialog({ title: 'Create a Room', owner: app.win, width: 360, content: h('div', { className: 'aol-ask' }, [
+      h('label', null, 'Name your new room (3 to 20 characters):'), input,
+      h('label', { className: 'check' }, [priv, 'Private room (not listed; friends need the name)']), err,
+      h('div', { className: 'button-row right' }, [ok, cancel])
+    ]) });
+    function submit() {
+      var name = input.value.trim().replace(/\s+/g, ' ');
+      if (!/^[A-Za-z0-9][A-Za-z0-9 '!&-]{2,19}$/.test(name)) { err.textContent = 'Room names are 3-20 letters, numbers or spaces.'; U.sound('chord'); return; }
+      var taken = app.memberRooms.some(function (r) { return same(r.name, name); }) || D.ROOMS.some(function (c) { return c.rooms.some(function (r) { return same(r.name, name); }); });
+      if (taken) { err.textContent = 'A room named "' + name + '" already exists.'; U.sound('chord'); return; }
+      var room = { id: 'm' + Date.now(), name: name, member: true, priv: priv.checked, here: 1 };
+      app.memberRooms.push(room);
+      d.close(true);
+      area('chat', room.id);
+      var w = app.mdi.find('rooms');
+      if (w) w.refresh();
+    }
+    ok.addEventListener('click', submit);
+    cancel.addEventListener('click', function () { d.close(true); });
+    input.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') submit(); if (e.key === 'Escape') d.close(true); });
+    setTimeout(function () { input.focus(); }, 0);
+    return d;
   }
 
   // -------------------------------------------- Quotes, Weather, Horoscopes
@@ -1390,6 +1958,270 @@
     })) });
   }
 
+  // -------------------------------------------- Download Manager
+  var DL_RATE = 3.4;   // KB per second: a 28.8 modem on a good day
+
+  function dlQueue() {
+    if (!app.downloads) app.downloads = D.DOWNLOADS.slice(0, 3).map(function (f) { return { name: f[0], kb: f[1], from: f[2], got: 0, done: false }; });
+    return app.downloads;
+  }
+  function fmtTime(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+
+  // One file at a time, like the real thing. Runs even if the window is closed.
+  function dlTick() {
+    var q = dlQueue(), cur = q.filter(function (f) { return !f.done; })[0];
+    if (!cur) { app.dlRunning = false; return; }
+    cur.got = Math.min(cur.kb, cur.got + DL_RATE * 0.5);
+    if (cur.got >= cur.kb) {
+      cur.done = true;
+      clip('files-done', "File's done!");
+      if (q.every(function (f) { return f.done; })) {
+        app.dlRunning = false;
+        alertBox('Your file transfer is complete.\n\n' + q.length + ' file' + (q.length === 1 ? '' : 's') + ' saved to C:\\America Online 4.0\\Download.', 'info', 'Download Manager');
+      }
+    }
+    var w = app.mdi.find('downloads');
+    if (w) w.refresh();
+  }
+
+  function downloadsWindow() {
+    var table = h('table', { className: 'list-table' });
+    var foot = h('span', { className: 'mb-count' });
+    var selected = null;
+    function btn(label, fn) { var b = h('button', { className: 'aol-btn' }, label); b.addEventListener('click', fn); return b; }
+    function render() {
+      var q = dlQueue(), first = q.filter(function (f) { return !f.done; })[0];
+      table.innerHTML = '';
+      table.appendChild(h('tr', null, [h('th', null, 'File'), h('th', null, 'Size'), h('th', { style: { width: '100%' } }, 'Progress'), h('th', null, 'Status'), h('th', null, 'Left')]));
+      q.forEach(function (f) {
+        var pct = Math.round(f.got / f.kb * 100);
+        var st = f.done ? 'Done' : (app.dlRunning && f === first) ? DL_RATE + ' KB/s' : f.got ? 'Stopped' : 'Waiting';
+        var tr = h('tr', { className: f === selected ? 'selected' : '' }, [
+          h('td', null, f.name), h('td', null, f.kb + ' KB'),
+          h('td', null, h('div', { className: 'dl-bar' }, h('i', { style: { width: pct + '%' } }))),
+          h('td', null, st), h('td', null, f.done ? '' : fmtTime((f.kb - f.got) / DL_RATE))
+        ]);
+        tr.addEventListener('click', function () { selected = f; render(); });
+        table.appendChild(tr);
+      });
+      var n = q.filter(function (f) { return f.done; }).length;
+      foot.textContent = q.length ? n + ' of ' + q.length + ' files complete. Connected at 28,800 bps.' : 'No files are waiting to be downloaded.';
+    }
+    function start() {
+      if (dlQueue().every(function (f) { return f.done; })) { alertBox('There are no files waiting to be downloaded.\n\nClick Add File to queue one.', 'info', 'Download Manager'); return; }
+      if (app.dlRunning) return;
+      app.dlRunning = true;
+      if (app.dlTimer) clearInterval(app.dlTimer);
+      app.dlTimer = every(500, function () { if (app.dlRunning) dlTick(); else { clearInterval(app.dlTimer); app.dlTimer = null; render(); } });
+      render();
+    }
+    function add() {
+      var have = dlQueue().map(function (f) { return f.name; });
+      var more = D.DOWNLOADS.filter(function (f) { return have.indexOf(f[0]) === -1; });
+      if (!more.length) { alertBox('There are no more files available for download today.', 'info', 'Download Manager'); return; }
+      var f = pick(more);
+      dlQueue().push({ name: f[0], kb: f[1], from: f[2], got: 0, done: false });
+      render();
+    }
+    function remove() {
+      if (!selected) return;
+      var q = dlQueue();
+      q.splice(q.indexOf(selected), 1);
+      selected = null;
+      render();
+    }
+    var kid = app.mdi.open({ kind: 'downloads', title: 'Download Manager', icon: 'aol-myfiles', width: 480, height: 280, content: h('div', { className: 'aol-dl' }, [
+      h('div', { className: 'sunken-panel dl-list' }, table), foot,
+      h('div', { className: 'mb-buttons' }, [btn('Start Download', start), btn('Stop', function () { app.dlRunning = false; render(); }), btn('Remove', remove), btn('Add File', add)])
+    ]) });
+    kid.refresh = render;
+    render();
+    return kid;
+  }
+
+  // -------------------------------------------- Print
+  // Progress, then the printer that isn't there.
+  function printDialog() {
+    var k = app.mdi.active;
+    if (!k) { alertBox('There is nothing to print.\n\nOpen a window first.'); return; }
+    var bar = h('i', { style: { width: '0%' } });
+    var cancel = h('button', { className: 'btn' }, 'Cancel');
+    var d = WM.dialog({ title: 'Print', owner: app.win, width: 320, content: h('div', { className: 'aol-print' }, [
+      h('div', { className: 'msgbox' }, [U.img('aol-print', 32), h('div', { className: 'text' }, 'Printing "' + k.title + '"...\n\nPage 1 of 1 on HP DeskJet 600 (LPT1)')]),
+      h('div', { className: 'dl-bar' }, bar),
+      h('div', { className: 'button-row' }, [cancel])
+    ]) });
+    var pct = 0;
+    var t = every(150, function () {
+      pct += 4 + Math.random() * 8;
+      bar.style.width = Math.min(pct, 96) + '%';
+      if (pct < 100) return;
+      clearInterval(t);
+      d.close(true);
+      WM.msgbox({ title: 'Print', owner: app.win, icon: 'error', buttons: ['&Retry', 'Cancel'],
+        text: 'There was an error writing to LPT1.\n\nMake sure the printer is connected properly and turned on, then click Retry.' }).then(function (b) { if (b === '&Retry' && app) printDialog(); });
+    });
+    d.on('close', function () { clearInterval(t); });
+    cancel.addEventListener('click', function () { d.close(true); });
+  }
+
+  // -------------------------------------------- Spell Check
+  var spellDict = null;
+  // Edit distance where swapping two neighbours ("teh") counts as one edit.
+  function editDist(a, b) {
+    var d = [], i, j;
+    for (i = 0; i <= a.length; i++) { d[i] = [i]; }
+    for (j = 0; j <= b.length; j++) d[0][j] = j;
+    for (i = 1; i <= a.length; i++) {
+      for (j = 1; j <= b.length; j++) {
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+    return d[a.length][b.length];
+  }
+  function suggestWords(w) {
+    return Object.keys(spellDict).filter(function (k) { return Math.abs(k.length - w.length) <= 2; })
+      .map(function (k) { return [editDist(w, k) + (k.charAt(0) === w.charAt(0) ? 0 : 0.5), k]; })
+      .filter(function (x) { return x[0] <= 2; })
+      .sort(function (a, b) { return a[0] - b[0] || a[1].localeCompare(b[1]); })
+      .slice(0, 5).map(function (x) { return x[1]; });
+  }
+
+  // Walks the text in a Write Mail box, asking about each word the dictionary doesn't know.
+  function spellCheck(ta) {
+    if (!spellDict) { spellDict = {}; D.SPELL.forEach(function (w) { spellDict[w] = true; }); }
+    var ignore = {}, pos = 0, found = 0;
+    function next() {
+      var re = /[A-Za-z][A-Za-z']*/g, m, text = ta.value;
+      re.lastIndex = pos;
+      while ((m = re.exec(text))) {
+        var w = m[0].replace(/'+$/, ''), low = w.toLowerCase().replace(/'s$/, '').replace(/'/g, '');
+        var prev = text.slice(0, m.index).replace(/[\s"(]+$/, '').slice(-1);
+        var skip = low.length < 2 || spellDict[low] || ignore[low]
+          || (/^[A-Z]/.test(w) && prev && !/[.!?]/.test(prev))            // a name, mid-sentence
+          || (w === w.toUpperCase() && w.length <= 4)                     // AOL, LOL, TTYL
+          || /\d/.test(text.charAt(m.index + m[0].length)) || /\d/.test(text.charAt(m.index - 1));
+        if (skip) continue;
+        found++;
+        return ask(m.index, m.index + w.length, w, low);
+      }
+      alertBox(found ? 'The spelling check is complete.' : 'No misspellings were found. Congratulations!', 'info', 'Spell Check');
+    }
+    function ask(start, end, word, low) {
+      var sug = suggestWords(low).map(function (s) { return /^[A-Z]/.test(word) ? s.charAt(0).toUpperCase() + s.slice(1) : s; });
+      var change = h('input', { type: 'text', className: 'field', value: sug[0] || word, spellcheck: 'false' });
+      var list = h('select', { className: 'field', size: 5 }, sug.map(function (s) { return h('option', { value: s }, s); }));
+      list.addEventListener('change', function () { change.value = list.value; });
+      change.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      function btn(label, fn, def) { var b = h('button', { className: 'btn' + (def ? ' default' : '') }, label); b.addEventListener('click', fn); return b; }
+      var d = WM.dialog({ title: 'Spell Check', owner: app.win, width: 340, content: h('div', { className: 'aol-ask' }, [
+        h('div', null, ['Not in dictionary: ', h('b', null, word)]),
+        h('label', null, 'Change to:'), change,
+        h('label', null, 'Suggestions:'), list,
+        h('div', { className: 'button-row right' }, [
+          btn('Ignore', function () { d.close(true); pos = end; next(); }),
+          btn('Ignore All', function () { d.close(true); ignore[low] = true; pos = end; next(); }),
+          btn('Change', function () {
+            var t = ta.value;
+            ta.value = t.slice(0, start) + change.value + t.slice(end);
+            d.close(true); pos = start + change.value.length; next();
+          }, true),
+          btn('Cancel', function () { d.close(true); })
+        ])
+      ]) });
+      setTimeout(function () { change.focus(); change.select(); }, 0);
+    }
+    next();
+  }
+
+  // -------------------------------------------- Time Online
+  // The 1998 price list, as a readout: unlimited vs. $4.95 for 5 hours, then $2.95 an hour.
+  function timeOnlineWindow() {
+    var out = h('div', { className: 'to-out' });
+    function hms(sec) { sec = Math.floor(sec); return Math.floor(sec / 3600) + ':' + String(Math.floor(sec / 60) % 60).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); }
+    function row(label, value) { return h('div', { className: 'to-row' }, [h('span', null, label), h('b', null, value)]); }
+    function render() {
+      var now = Date.now();
+      var month = (app.state.usage[usageKey()] || 0) + (now - app.usageAt) / 1000;
+      var hours = month / 3600, pay = 4.95 + Math.max(0, hours - 5) * 2.95;
+      out.innerHTML = '';
+      U.append(out, [
+        row('Screen name:', app.sn),
+        row('Signed on at:', new Date(app.since).toLocaleTimeString('en-US')),
+        row('Time online this session:', hms((now - app.since) / 1000)),
+        row('This month:', hours.toFixed(1) + ' hours (' + Math.round(month / 60) + ' minutes)'),
+        row('Free hours left on the CD:', Math.max(0, 1000 - hours).toFixed(1) + ' of 1,000'),
+        h('h4', null, 'What you would owe in 1998'),
+        row('Unlimited Access:', '$21.95 a month'),
+        row('$4.95 for 5 hours, then $2.95 an hour:', '$' + pay.toFixed(2)),
+        h('p', null, pay > 21.95
+          ? 'Unlimited saves you $' + (pay - 21.95).toFixed(2) + ' this month. Smart choice!'
+          : 'The hourly plan would cost $' + (21.95 - pay).toFixed(2) + ' less this month. Break-even is about 10.8 hours. Stay online a little longer!'),
+        h('p', { className: 'note' }, 'Your free hours are on the house. Nobody has ever actually been billed.')
+      ]);
+    }
+    var kid = app.mdi.open({ kind: 'timeonline', title: 'Time Online', icon: 'aol-myaol', width: 400, height: 340, content: h('div', { className: 'aol-timeonline' }, [
+      h('div', { className: 'q-top' }, [U.img('aol-myaol', 32), h('div', null, [h('b', null, 'Time Online'), h('div', null, 'Your AOL account usage')])]), out
+    ]) });
+    var t = every(1000, render);
+    kid.on('close', function () { clearInterval(t); });
+    render();
+    return kid;
+  }
+
+  // -------------------------------------------- The AOL 4.0 CD (drive D:)
+  var cdLoading = false;
+  // Opening D: spins the disc, then the autorun splash appears.
+  function launchCd() {
+    if (cdLoading) return null;
+    cdLoading = true;
+    document.body.classList.add('busy');
+    U.sound('hddSeek', 1300);
+    setTimeout(function () {
+      document.body.classList.remove('busy');
+      cdLoading = false;
+      if (Shell.ready()) cdSplash();
+    }, 1300);
+    return null;
+  }
+
+  function cdSplash() {
+    var install = h('button', { className: 'aol-btn big default' }, 'Install America Online');
+    var exit = h('button', { className: 'aol-btn big' }, 'Exit');
+    var files = ['AOL.EXE', 'WAOL.DLL', 'AOLDIAL.DLL', 'MODEMS.INF', 'FREEHRS.DAT', 'WELCOME.WAV'];
+    var status = h('div', { className: 'cd-status' });
+    var bar = h('i', { style: { width: '0%' } });
+    var buttons = h('div', { className: 'cd-buttons' }, [install, exit]);
+    var win = WM.open({ app: 'aolcd', title: 'America Online 4.0', icon: 'drive-cd', width: 440, height: 'auto', resizable: false, maximizable: false,
+      content: h('div', { className: 'aolcd' }, [
+        h('div', { className: 'cd-art' }, [U.img('aol-logo', 64), h('div', null, [h('div', { className: 'cd-name' }, 'America Online'), h('div', { className: 'cd-ver' }, 'Version 4.0 for Windows 95/98')])]),
+        h('div', { className: 'cd-head' }, 'Install America Online 4.0 \u2014 1000 hours FREE!'),
+        h('p', { className: 'cd-fine' }, 'Try AOL free for 45 days. Chat, e-mail, surf the Web and hear "You\'ve got mail!" for the first time in your own home.\n\nRequires a 486 or better, 16 MB of RAM, a modem and a phone line nobody else is using.'),
+        status, h('div', { className: 'dl-bar hidden' }, bar), buttons
+      ]) });
+    var t = null;
+    win.on('close', function () { clearInterval(t); });
+    exit.addEventListener('click', function () { win.close(true); });
+    install.addEventListener('click', function () {
+      buttons.classList.add('hidden');
+      bar.parentNode.classList.remove('hidden');
+      var pct = 0;
+      U.sound('hddSeek', 3000);
+      t = setInterval(function () {
+        pct += 3 + Math.random() * 5;
+        bar.style.width = Math.min(pct, 100) + '%';
+        status.textContent = 'Copying ' + files[Math.min(files.length - 1, Math.floor(pct / 100 * files.length))] + ' to C:\\America Online 4.0';
+        if (pct < 100) return;
+        clearInterval(t);
+        status.textContent = 'Setup is complete.';
+        setTimeout(function () { win.close(true); Shell.launch('aol'); }, 500);
+      }, 120);
+    });
+    setTimeout(function () { install.focus(); }, 0);
+    return win;
+  }
+
   // -------------------------------------------- Favorites
   function favoritesMenu() {
     var items = [
@@ -1428,5 +2260,6 @@
     ]) });
   }
 
+  Shell.register('aolcd', { name: 'AOL 4.0 CD', icon: 'drive-cd', single: true, launch: launchCd });
   Shell.register('aol', { name: 'America Online', icon: 'aol', single: true, launch: launch, reopen: function (w, arg) { if (arg && app && app.online) go(arg); } });
 })();
