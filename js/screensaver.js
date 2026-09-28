@@ -737,11 +737,18 @@
     }
     function loop(ts) {
       if (stopped) return;
+      if (global.document.hidden) { raf = 0; return; }   // resumed by onVisible
       raf = global.requestAnimationFrame(loop);
       var dt = last ? Math.min(0.1, (ts - last) / 1000) : 1 / 60;
       last = ts;
       try { effect.frame(dt); } catch (e) { /* keep going */ }
     }
+    function onVisible() {
+      if (stopped || global.document.hidden || raf) return;
+      last = 0;
+      raf = global.requestAnimationFrame(loop);
+    }
+    global.document.addEventListener('visibilitychange', onVisible);
     size();
     if (preview && typeof global.ResizeObserver === 'function') {
       ro = new global.ResizeObserver(onResize);
@@ -757,6 +764,7 @@
         if (stopped) return;
         stopped = true;
         global.cancelAnimationFrame(raf);
+        global.document.removeEventListener('visibilitychange', onVisible);
         clearTimeout(resizeTimer);
         if (ro) ro.disconnect(); else global.removeEventListener('resize', onResize);
         try { effect.destroy(); } catch (e) { /* ignore */ }

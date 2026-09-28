@@ -90,7 +90,24 @@
     get: function (k, d) {
       try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; }
     },
-    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
+    // Returns true if the value was saved, false if storage is full or unavailable.
+    set: function (k, v) {
+      try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; }
+    },
+    // Like set, but shows a single "disk full" warning per session if the save fails.
+    setWarn: function (k, v, what) {
+      var ok = U.store.set(k, v);
+      if (!ok) U.store.warnOnce(what);
+      return ok;
+    },
+    warnOnce: function (what) {
+      if (U.store._warned) return;
+      U.store._warned = true;
+      try {
+        if (window.WM && WM.msgbox) WM.msgbox({ title: 'Windows', icon: 'warning',
+          text: 'There is not enough free disk space on drive C: to save ' + (what || 'your settings') + '.\n\nYour changes will be lost when you restart. Delete some files you no longer need, and then try again.' });
+      } catch (e) { /* ignore */ }
+    }
   };
 
   U.formatDate = function (ms) {

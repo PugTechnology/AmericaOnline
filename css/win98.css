@@ -434,3 +434,16 @@ body.dragging, body.dragging * { cursor: inherit; }
 
 /* Let pointer events drive these on touch screens instead of scrolling/zooming. */
 .title-bar, .resize-edge, .resize-grip, .desk-icon, .mine-grid, .menubar { touch-action: none; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+  .zoom-rect { display: none; }
+  #bios .cursor, .dos-cursor { animation: none !important; }
+}

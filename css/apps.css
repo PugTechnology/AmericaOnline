@@ -45,7 +45,12 @@
 .web-pane .legend { display: flex; align-items: center; gap: 5px; margin: 0 0 3px; }
 .web-pane .sw { width: 10px; height: 10px; display: inline-block; border: 1px solid #000; }
 .web-pane .sw.used { background: #0000ff; } .web-pane .sw.free { background: #ff00ff; }
-@media (max-width: 640px) { .web-pane { display: none; } }
+/* On phones keep the Web View pane, just narrower and without the pie chart. */
+@media (max-width: 640px) {
+  .web-pane { width: 96px; padding: 8px 6px; }
+  .web-pane h1 { font-size: 13px; }
+  .web-pane .pie { display: none; }
+}
 .icon-view .item img.lnk { filter: none; }
 .props { padding: 12px; }
 .props-head { display: flex; align-items: center; gap: 14px; }
