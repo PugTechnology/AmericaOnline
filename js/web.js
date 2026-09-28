@@ -26,12 +26,24 @@
     'winamp.com': '19990125', 'icq.com': '19990125', 'myspace.com': '19990125', 'toysrus.com': '19990125', 'barnesandnoble.com': '19990125',
     'digitalcity.com': '19990125', 'people.com': '19990125', 'time.com': '19990125', 'usatoday.com': '19990125', 'nytimes.com': '19990125',
     'starwars.com': '19990508', 'thesims.com': '20000301', 'blizzard.com': '19990125', 'idsoftware.com': '19990125', 'sega.com': '19991013',
-    'www2.warnerbros.com': '19970101', 'whitehouse.gov': '19990125', 'nasa.gov': '19981202', 'msn.com': '19990125', 'dictionary.com': '19990125'
+    'www2.warnerbros.com': '19970101', 'pointcast.com': '19981202', 'whitehouse.gov': '19990125', 'nasa.gov': '19981202', 'msn.com': '19990125', 'dictionary.com': '19990125'
   };
 
   var Web = {
     year: function () { return U.store.get('w98.webyear', 1999); },
     setYear: function (y) { U.store.set('w98.webyear', y); },
+
+    // "Simulate 28.8k modem": pages arrive slowly, revealed top-down and sharpening as they come.
+    // Unless someone picked a side (IE's View menu), it is on while AOL is signed on.
+    modemOn: function () {
+      var v = U.store.get('w98.modem', null);
+      if (v === true || v === false) return v;
+      var t = document.getElementById('tray-aol');
+      return !!t && !t.classList.contains('hidden');
+    },
+    setModem: function (on) { U.store.set('w98.modem', on); },
+    modemRange: [5, 9],   // seconds a throttled page takes
+    modemSeconds: function () { return Web.modemRange[0] + Math.random() * (Web.modemRange[1] - Web.modemRange[0]); },
 
     normalize: function (input) {
       var s = String(input || '').trim();
@@ -77,8 +89,24 @@
         h('div', { className: 'progress' })
       ])]);
       holder.appendChild(loading);
-      var frame = null, history = [], index = -1, loadTimer = null, progressTimer = null;
-      var pane = { el: holder, url: '', title: '', onchange: null, loading: false };
+      // The mask sits over the iframe; its top edge slides down like a slow scanline.
+      var mask = h('div', { className: 'web-mask hidden' });
+      holder.appendChild(mask);
+      var frame = null, history = [], index = -1, loadTimer = null, progressTimer = null, tickTimer = null;
+      var pane = { el: holder, url: '', title: '', onchange: null, onprogress: null, progress: 0, loading: false };
+
+      function setProgress(p) { pane.progress = p; if (pane.onprogress) pane.onprogress(p); }
+
+      // Everything that ends a load: done, stopped or replaced.
+      function endLoad(what) {
+        clearInterval(tickTimer); clearInterval(progressTimer); clearTimeout(loadTimer);
+        mask.classList.add('hidden');
+        if (frame) frame.style.filter = '';
+        loading.classList.add('hidden');
+        pane.loading = false;
+        setProgress(what === 'loaded' ? 1 : 0);
+        if (pane.onchange) pane.onchange(what);
+      }
 
       function progress() {
         var bar = loading.querySelector('.progress');
@@ -106,13 +134,37 @@
         loading.classList.remove('hidden');
         loading.querySelector('.web-loading-text').textContent = 'Connecting to ' + (Web.host(pane.url) || 'site') + '...';
         progress();
+        var modem = Web.modemOn(), dur = Web.modemSeconds() * 1000, t0 = Date.now(), arrived = false;
+        clearInterval(tickTimer);
+        setProgress(0);
+        mask.classList.add('hidden');
         frame.addEventListener('load', function () {
-          pane.loading = false;
-          loading.classList.add('hidden');
-          clearInterval(progressTimer);
-          clearTimeout(loadTimer);
-          if (pane.onchange) pane.onchange('loaded');
+          arrived = true;
+          if (!modem) endLoad('loaded');
         });
+        if (modem) {
+          // Wait out the "modem", then reveal: connect (12%), then scanlines with blur passes 8/4/2/1px.
+          mask.classList.remove('hidden');
+          mask.style.top = '0';
+          frame.style.filter = 'blur(8px)';
+          var f = frame;
+          tickTimer = setInterval(function () {
+            var p = Math.min(1, (Date.now() - t0) / dur);
+            if (p >= 1 && arrived) {
+              if (window.Achievements && dur >= 5000) Achievements.unlock('patience');
+              return endLoad('loaded');
+            }
+            var shown = Math.min(p, arrived ? 1 : 0.97);
+            if (shown < 0.12) { mask.style.top = '0'; }
+            else { loading.classList.add('hidden'); mask.style.top = ((shown - 0.12) / 0.88 * 100) + '%'; }
+            f.style.filter = shown < 0.3 ? 'blur(8px)' : shown < 0.55 ? 'blur(4px)' : shown < 0.8 ? 'blur(2px)' : shown < 1 ? 'blur(1px)' : '';
+            setProgress(shown);
+          }, 100);
+        } else {
+          // No modem: a bar that creeps toward 90% until the page really arrives.
+          var est = 0;
+          tickTimer = setInterval(function () { est += (0.9 - est) * 0.1; setProgress(est); }, 250);
+        }
         clearTimeout(loadTimer);
         loadTimer = setTimeout(function () {
           loading.querySelector('.web-loading-text').textContent = 'The site is taking a long time to respond...';
@@ -134,15 +186,12 @@
       pane.forward = function () { if (index < history.length - 1) { index++; load(history[index]); } };
       pane.reload = function () { if (history[index]) load(history[index]); };
       pane.stop = function () {
-        pane.loading = false;
-        loading.classList.add('hidden');
-        clearInterval(progressTimer);
         if (frame) try { frame.contentWindow.stop(); } catch (e) { /* cross-origin */ }
-        if (pane.onchange) pane.onchange('stopped');
+        endLoad('stopped');
       };
       pane.canBack = function () { return index > 0; };
       pane.canForward = function () { return index < history.length - 1; };
-      pane.destroy = function () { clearInterval(progressTimer); clearTimeout(loadTimer); if (frame) frame.src = 'about:blank'; };
+      pane.destroy = function () { clearInterval(progressTimer); clearInterval(tickTimer); clearTimeout(loadTimer); if (frame) frame.src = 'about:blank'; };
       return pane;
     }
   };

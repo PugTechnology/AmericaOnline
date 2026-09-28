@@ -24,6 +24,9 @@
   --select: #000080;
   --desktop: #008080;
   --tooltip: #ffffe1;
+  --title-a: var(--navy);   /* active title bar gradient; Desktop Themes change these */
+  --title-b: #1084d0;
+  --title-text: #fff;
   --ui-font: "MS Sans Serif 98", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
   --raised: inset -1px -1px var(--dark), inset 1px 1px var(--hilight), inset -2px -2px var(--shadow), inset 2px 2px var(--light);
   --raised-window: inset -1px -1px var(--dark), inset 1px 1px var(--light), inset -2px -2px var(--shadow), inset 2px 2px var(--hilight);
@@ -150,7 +153,7 @@ fieldset.group legend { padding: 0 3px; background: var(--face); }
   color: #c0c0c0;
   font-weight: bold;
 }
-.window.active > .title-bar { background: linear-gradient(90deg, var(--navy), #1084d0); color: #fff; }
+.window.active > .title-bar { background: linear-gradient(90deg, var(--title-a), var(--title-b)); color: var(--title-text); }
 .title-bar .title {
   flex: 1;
   display: flex;
@@ -312,7 +315,7 @@ body.dragging, body.dragging * { cursor: inherit; }
 #start-menu.hidden { display: none; }
 #start-menu .banner {
   width: 21px;
-  background: linear-gradient(0deg, #000080, #1084d0);
+  background: linear-gradient(0deg, var(--title-a), var(--title-b));
   position: relative;
   overflow: hidden;
 }

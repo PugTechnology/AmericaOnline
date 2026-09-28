@@ -306,6 +306,7 @@
     function exec(line) {
       line = line.trim();
       if (!line) return;
+      if (window.BSOD && BSOD.command(line, { victim: win })) return;   // CON\CON: the classic Win9x crash
       if (/^[a-z]:$/i.test(line)) {
         var L = line.charAt(0).toUpperCase();
         if (L === 'C') { cwd = 'C:\\'; return; }

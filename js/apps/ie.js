@@ -8,6 +8,9 @@
     var addr = h('input', { type: 'text', className: 'ie-address', spellcheck: 'false', autocomplete: 'off' });
     var status = h('div'), zone = h('div', { className: 'fixed' }, [U.img('network', 16), ' Internet zone']);
     var throbber = h('div', { className: 'ie-throbber' }, U.img('windows-flag', 32));
+    // The progress bar that fills while a page loads (slowly, with the 28.8k modem on).
+    var progFill = h('i');
+    var progBox = h('div', { className: 'fixed ie-progress' }, progFill);
 
     function tb(icon, label, fn) {
       var b = h('button', { className: 'tbtn', title: label }, [U.img(icon, 16), h('span', null, label)]);
@@ -36,7 +39,7 @@
       h('div', { className: 'address-bar' }, [h('span', null, U.label('A&ddress')), h('div', { className: 'combo' }, [U.img('ie', 16), addr]),
         h('button', { className: 'btn go-btn', onclick: function () { go(); } }, 'Go')]),
       h('div', { className: 'ie-view sunken-panel' }, pane.el),
-      h('div', { className: 'status-bar' }, [status, zone])
+      h('div', { className: 'status-bar' }, [status, progBox, zone])
     ];
 
     var win = WM.open({ app: 'ie', title: 'Microsoft Internet Explorer', icon: 'ie', width: 720, height: 520, content: content, className: 'ie', shield: true });
@@ -50,8 +53,10 @@
       bBack.disabled = !pane.canBack();
       bFwd.disabled = !pane.canForward();
       throbber.classList.toggle('busy', what === 'loading');
-      status.textContent = what === 'loading' ? 'Opening page http://web.archive.org/...' : 'Done';
+      status.textContent = what === 'loading' ? 'Opening page ' + pane.url + '...' : 'Done';
+      progBox.classList.toggle('on', what === 'loading');
     };
+    pane.onprogress = function (p) { progFill.style.width = Math.round(p * 100) + '%'; };
 
     var FAVS = [
       ['Yahoo!', 'www.yahoo.com'], ['AltaVista', 'www.altavista.com'], ['Ask Jeeves', 'www.askjeeves.com'], ['CNN Interactive', 'www.cnn.com'],
@@ -82,12 +87,15 @@
         { label: '&Close', action: function () { win.close(); } }
       ] },
       { label: '&Edit', items: [{ label: 'Cu&t', disabled: true }, { label: '&Copy', disabled: true }, { label: '&Paste', disabled: true }] },
-      { label: '&View', items: [
-        { label: '&Stop', shortcut: 'Esc', action: function () { pane.stop(); } },
-        { label: '&Refresh', shortcut: 'F5', action: function () { pane.reload(); } },
-        '-',
-        { label: 'Time &Travel', items: yearMenu }
-      ] },
+      { label: '&View', items: function () {
+        return [
+          { label: '&Stop', shortcut: 'Esc', action: function () { pane.stop(); } },
+          { label: '&Refresh', shortcut: 'F5', action: function () { pane.reload(); } },
+          '-',
+          { label: 'Time &Travel', items: yearMenu },
+          { label: 'Simulate 28.8k &Modem', checked: Web.modemOn(), action: function () { Web.setModem(!Web.modemOn()); } }
+        ];
+      } },
       { label: '&Go', items: [
         { label: '&Back', action: function () { pane.back(); } },
         { label: '&Forward', action: function () { pane.forward(); } },
