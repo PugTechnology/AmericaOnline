@@ -867,6 +867,10 @@
   var ctx = null, master = null, eng = null;
 
   var muted = false;
+  var VOL_KEY = 'w98.volume';
+  var level = 1;   // user volume 0..1, scales MASTER
+  try { var lv = global.localStorage && global.localStorage.getItem(VOL_KEY); if (lv != null && !isNaN(+lv)) level = Math.max(0, Math.min(1, +lv)); } catch (e) { level = 1; }
+  function masterGain() { return muted ? 0 : MASTER * level; }
   try { muted = global.localStorage && global.localStorage.getItem(STORE_KEY) === '1'; } catch (e) { muted = false; }
 
   function wait(sec) {
@@ -956,7 +960,7 @@
         if (!ctx) {
           ctx = new AC();
           master = ctx.createGain();
-          master.gain.value = muted ? 0 : MASTER;
+          master.gain.value = masterGain();
           var lim = ctx.createDynamicsCompressor();   // safety limiter only
           lim.threshold.value = -3; lim.knee.value = 2; lim.ratio.value = 20;
           lim.attack.value = 0.002; lim.release.value = 0.15;
@@ -977,9 +981,71 @@
       try {
         if (master) {
           master.gain.cancelScheduledValues(ctx.currentTime);
-          master.gain.setTargetAtTime(muted ? 0 : MASTER, ctx.currentTime, 0.02);
+          master.gain.setTargetAtTime(masterGain(), ctx.currentTime, 0.02);
         }
       } catch (e) { /* */ }
+    },
+    // Master volume, 0..1 (persisted). Independent of the mute switch.
+    setVolume: function (v) {
+      level = Math.max(0, Math.min(1, +v || 0));
+      try { if (global.localStorage) global.localStorage.setItem(VOL_KEY, String(level)); } catch (e) { /* */ }
+      try {
+        if (master) {
+          master.gain.cancelScheduledValues(ctx.currentTime);
+          master.gain.setTargetAtTime(masterGain(), ctx.currentTime, 0.02);
+        }
+      } catch (e) { /* */ }
+    },
+    // Play a little chiptune. song = { tempo: bpm, voices: [{ wave, gain, notes: [[midi|0, beats], ...] }] }.
+    // Returns { dur, stop }; dur (seconds) is valid even when audio is unavailable or muted,
+    // so callers can keep their own clock. opts.offset skips ahead by that many seconds.
+    playSong: function (song, opts) {
+      opts = opts || {};
+      var spb = 60 / song.tempo, off = opts.offset || 0, dur = 0, oscs = [];
+      song.voices.forEach(function (v) {
+        var t = 0;
+        v.notes.forEach(function (n) { t += n[1] * spb; });
+        dur = Math.max(dur, t);
+      });
+      var out = null;
+      try {
+        if (!ctx || !master) Sound.unlock();
+        if (ctx && master) {
+          out = ctx.createGain();
+          out.gain.value = 1;
+          out.connect(master);          // master carries the mute and volume
+          var t0 = ctx.currentTime + 0.05;
+          song.voices.forEach(function (v) {
+            var t = 0;
+            v.notes.forEach(function (n) {
+              var len = n[1] * spb, start = t - off;
+              t += len;
+              if (!n[0] || t <= off) return;
+              var at = Math.max(0, start), nl = Math.min(len * 0.92, t - off - at);
+              var o = ctx.createOscillator(), g = ctx.createGain();
+              o.type = v.wave || 'square';
+              o.frequency.value = 440 * Math.pow(2, (n[0] - 69) / 12);
+              var peak = v.gain == null ? 0.12 : v.gain;
+              g.gain.setValueAtTime(0.0001, t0 + at);
+              g.gain.linearRampToValueAtTime(peak, t0 + at + 0.01);
+              g.gain.setValueAtTime(peak * 0.7, t0 + at + Math.min(0.08, nl * 0.5));
+              g.gain.linearRampToValueAtTime(0.0001, t0 + at + nl);
+              o.connect(g); g.connect(out);
+              o.start(t0 + at); o.stop(t0 + at + nl + 0.02);
+              oscs.push(o);
+            });
+          });
+        }
+      } catch (e) { out = null; }
+      return {
+        dur: Math.max(0, dur - off),
+        stop: function () {
+          try {
+            oscs.forEach(function (o) { try { o.stop(); } catch (e) { /* already ended */ } });
+            if (out) { out.disconnect(); out = null; }
+          } catch (e) { /* */ }
+        }
+      };
     },
     powerOn: function () { return call('powerOn'); },
     powerOff: function () { return call('powerOff'); },
@@ -1030,6 +1096,11 @@
     _Engine: Engine,
     _MASTER: MASTER
   };
+  Object.defineProperty(Sound, 'volume', {
+    enumerable: true,
+    get: function () { return level; },
+    set: function (v) { Sound.setVolume(v); }
+  });
   Object.defineProperty(Sound, 'muted', {
     enumerable: true,
     get: function () { return muted; },

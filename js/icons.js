@@ -1520,6 +1520,81 @@ var BUBBLE16 = [
     16: function (g) { I.aol[16](g); }
   };
 
+  // ---- accessories: Calculator, Paint, WordPad, CD Player, image/doc files ----
+  I.calc = {
+    32: function (g) {
+      g.raised(6, 2, 20, 28, L);
+      g.sunken(9, 5, 14, 6, '#c8e8c0'); g.hl(15, 21, 7, K); g.hl(13, 21, 9, K);
+      for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {
+        var x = 9 + c * 4, y = 14 + r * 4;
+        g.rect(x, y, 3, 3, c === 3 ? R : W); g.hl(x, x + 2, y + 2, D); g.vl(x + 2, y, y + 2, D);
+      }
+    },
+    16: function (g) {
+      g.raised(2, 0, 12, 16, L);
+      g.sunken(4, 2, 8, 3, '#c8e8c0');
+      for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) g.rect(4 + c * 3, 6 + r * 3, 2, 2, c === 2 ? R : W);
+    }
+  };
+  I.paint = {
+    32: function (g) {
+      // palette
+      g.shape(3, 8, 27, 29, function (x, y) { return ((x - 15) / 12) * ((x - 15) / 12) + ((y - 19) / 10.5) * ((y - 19) / 10.5) <= 1; }, '#f0e0b0', K);
+      g.rect(8, 15, 3, 3, R); g.rect(13, 12, 3, 3, Y); g.rect(19, 13, 3, 3, LG); g.rect(9, 21, 3, 3, B); g.rect(14, 24, 3, 3, PK);
+      // brush
+      g.line(30, 2, 20, 14, '#a06020'); g.line(29, 2, 19, 14, '#a06020'); g.line(30, 3, 21, 14, K);
+      g.rect(17, 13, 4, 4, L); g.rect(15, 15, 3, 3, R);
+    },
+    16: function (g) {
+      g.shape(1, 4, 13, 15, function (x, y) { return ((x - 7) / 6.5) * ((x - 7) / 6.5) + ((y - 9.5) / 5.5) * ((y - 9.5) / 5.5) <= 1; }, '#f0e0b0', K);
+      g.px(4, 8, R); g.px(6, 6, Y); g.px(9, 7, LG); g.px(5, 11, B);
+      g.line(15, 0, 10, 6, '#a06020'); g.px(9, 7, R);
+    }
+  };
+  I.wordpad = {
+    32: function (g) {
+      page(g, 6, 3, 19, 26, 5, W);
+      g.rect(9, 7, 4, 4, B); g.rect(13, 9, 3, 2, B);
+      lines(g, 9, 14, 13, 6, 3, D);
+      // pen
+      g.line(28, 12, 15, 26, '#c08000'); g.line(27, 12, 14, 26, '#c08000'); g.px(14, 27, K); g.px(13, 27, K);
+    },
+    16: function (g) {
+      page(g, 2, 1, 10, 14, 3, W);
+      g.rect(4, 3, 3, 3, B); lines(g, 4, 8, 6, 3, 2, D);
+      g.line(15, 6, 9, 13, '#c08000');
+    }
+  };
+  I.cdplayer = {
+    32: function (g) {
+      g.shape(2, 2, 29, 29, function (x, y) { return Math.hypot(x - 16, y - 16) <= 13.5; }, function (x, y) {
+        var a = Math.atan2(y - 16, x - 16) * 3, d = Math.hypot(x - 16, y - 16);
+        return d < 4 ? L : (Math.sin(a + d * 0.3) > 0.55 ? '#ff80ff' : Math.sin(a) > 0 ? '#80e0ff' : '#e0e0e0');
+      }, K);
+      g.shape(12, 12, 19, 19, function (x, y) { return Math.hypot(x - 16, y - 16) <= 3.6; }, T, K);
+    },
+    16: function (g) {
+      g.shape(1, 1, 14, 14, function (x, y) { return Math.hypot(x - 8, y - 8) <= 6.8; }, function (x, y) { return (x + y) % 3 ? '#80e0ff' : '#e0e0e0'; }, K);
+      g.shape(6, 6, 9, 9, function (x, y) { return Math.hypot(x - 8, y - 8) <= 1.8; }, T, K);
+    }
+  };
+  I['bmp-file'] = {
+    32: function (g) {
+      page(g, 6, 1, 20, 29, 6, W);
+      g.rect(9, 12, 14, 12, C); g.rect(9, 20, 14, 4, LG);
+      g.shape(9, 12, 22, 24, function (x, y) { return Math.hypot(x - 19, y - 16) <= 2.5; }, Y, null);
+      g.frame(9, 12, 14, 12, K);
+    },
+    16: function (g) {
+      page(g, 2, 0, 11, 15, 4, W);
+      g.rect(4, 6, 7, 6, C); g.rect(4, 10, 7, 2, LG); g.frame(4, 6, 7, 6, K);
+    }
+  };
+  I['doc-file'] = {
+    32: function (g) { page(g, 6, 1, 20, 29, 6, W); g.rect(9, 6, 5, 5, B); lines(g, 9, 14, 14, 5, 3, D); },
+    16: function (g) { page(g, 2, 0, 11, 15, 4, W); g.rect(4, 3, 3, 3, B); lines(g, 4, 8, 6, 3, 2, D); }
+  };
+
   // ---- rendering / cache --------------------------------------------------
   var cache = {};
   function render(name, size) {

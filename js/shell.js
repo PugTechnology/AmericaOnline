@@ -42,6 +42,8 @@
       }
       if (node.t === 'd') return Shell.launch('explorer', FS.realPath(path));
       if (node.app) return Shell.launch(node.app, node.lnk ? undefined : path);
+      var assoc = Shell.assoc[FS.ext(path)];
+      if (assoc) { Shell.addRecent(FS.realPath(path)); return Shell.launch(assoc.app, FS.realPath(path)); }
       if (!node.bin) {
         Shell.addRecent(FS.realPath(path));
         return Shell.launch('notepad', FS.realPath(path));
@@ -58,6 +60,7 @@
         return p ? p.icon : 'exe';
       }
       var e = FS.ext(name);
+      if (Shell.assoc[e] && Shell.assoc[e].icon) return Shell.assoc[e].icon;
       if (e === 'txt' || e === 'log' || e === 'doc' || e === 'me') return 'text-file';
       if (e === 'ini' || e === 'sys' || e === 'cfg' || e === 'inf') return 'sys-file';
       if (e === 'bat') return 'bat-file';
@@ -65,6 +68,10 @@
       if (!node.bin) return 'text-file';
       return 'wad-file';
     },
+
+    // File associations by extension: Shell.associate('bmp', 'paint', 'bmp-file').
+    assoc: {},
+    associate: function (ext, app, icon) { Shell.assoc[ext] = { app: app, icon: icon }; },
 
     displayName: function (name, node) {
       if (node && node.lnk) return name.replace(/\.lnk$/i, '');
@@ -454,7 +461,13 @@
         { label: 'System Tools', icon: 'programs', items: [
           { label: 'Compaq QuickRestore', icon: 'drive-hdd', action: function () { Shell.launch('control', 'quickrestore'); } }
         ] },
-        { label: 'Notepad', icon: 'notepad', action: function () { Shell.launch('notepad'); } }
+        { label: 'Entertainment', icon: 'programs', items: [
+          { label: 'CD Player', icon: 'cdplayer', action: function () { Shell.launch('cdplayer'); } }
+        ] },
+        { label: 'Calculator', icon: 'calc', action: function () { Shell.launch('calc'); } },
+        { label: 'Notepad', icon: 'notepad', action: function () { Shell.launch('notepad'); } },
+        { label: 'Paint', icon: 'paint', action: function () { Shell.launch('paint'); } },
+        { label: 'WordPad', icon: 'wordpad', action: function () { Shell.launch('wordpad'); } }
       ] },
       { label: 'America Online', icon: 'programs', items: [
         { label: 'America Online 4.0', icon: 'aol', action: function () { Shell.launch('aol'); } },
@@ -516,7 +529,9 @@
     taskButtons = h('div', { id: 'task-buttons' });
     var clock = h('span', { id: 'clock' });
     var vol = h('button', { className: 'tray-btn', title: 'Volume' }, U.img('volume', 16));
-    vol.addEventListener('click', toggleMute);
+    // Click or double-click the speaker for the volume slider (falls back to plain mute).
+    vol.addEventListener('click', function () { if (Shell.showVolume) Shell.showVolume(vol); else toggleMute(); });
+    vol.addEventListener('dblclick', function () { if (Shell.showVolume) Shell.showVolume(vol, true); });
     var aolTray = h('button', { className: 'tray-btn hidden', id: 'tray-aol', title: 'America Online' }, U.img('aol', 16));
     aolTray.addEventListener('click', function () { Shell.launch('aol'); });
     var tray = h('div', { id: 'tray' }, [aolTray, vol, clock]);
@@ -614,7 +629,7 @@
   function toggleMute() {
     if (!window.Sound) return;
     Sound.setMuted(!Sound.muted);
-    updateMuteIcon(document.querySelector('#tray .tray-btn[title="Volume"]'));
+    updateMuteIcon(document.querySelector('#tray .tray-btn[title^="Volume"]'));
   }
   function updateMuteIcon(btn) {
     if (!btn) return;
@@ -622,6 +637,9 @@
     btn.title = muted ? 'Volume (muted)' : 'Volume';
     btn.style.opacity = muted ? '0.45' : '1';
   }
+
+  // Lets the volume popup refresh the tray speaker after a mute change.
+  Shell.updateMuteIcon = function () { updateMuteIcon(document.querySelector('#tray .tray-btn[title^="Volume"]')); };
 
   Shell.setAolTray = function (on) {
     var t = document.getElementById('tray-aol');
@@ -642,7 +660,23 @@
     if (!desktopEl) return;
     desktopEl.style.backgroundColor = s.color;
     desktopEl.style.backgroundImage = PATTERNS[s.pattern] || '';
+    desktopEl.style.backgroundRepeat = '';
+    desktopEl.style.backgroundPosition = '';
+    // A wallpaper picture (Paint's Set As Wallpaper) sits over the pattern.
+    var wp = U.store.get('w98.wallpaper', null);
+    if (wp && wp.src) {
+      var pat = PATTERNS[s.pattern];
+      desktopEl.style.backgroundImage = 'url("' + wp.src + '")' + (pat ? ', ' + pat : '');
+      desktopEl.style.backgroundRepeat = (wp.mode === 'center' ? 'no-repeat' : 'repeat') + (pat ? ', repeat' : '');
+      desktopEl.style.backgroundPosition = wp.mode === 'center' ? 'center' : '0 0';
+    }
   }
+  Shell.setWallpaper = function (src, mode) {
+    U.store.set('w98.wallpaper', src ? { src: src, mode: mode } : null);
+    var got = U.store.get('w98.wallpaper', null);
+    applyDesktopStyle();
+    return !src || !!(got && got.src === src);   // false when storage was full
+  };
   Shell.applyDesktopStyle = applyDesktopStyle;
 
   Shell.logoff = function () {
