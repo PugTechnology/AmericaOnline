@@ -201,10 +201,9 @@
         el.classList.add('dragging');
         el.style.left = (ox + dx) + 'px';
         el.style.top = (oy + dy) + 'px';
-      });
-      document.addEventListener('pointerup', function up() {
-        document.removeEventListener('pointerup', up);
+      }, null, function (ev, cancelled) {
         el.classList.remove('dragging');
+        if (cancelled) { el.style.left = ox + 'px'; el.style.top = oy + 'px'; return; }
         if (!moved) return;
         // Snap to the icon grid, like "Auto Arrange" off but "Align to grid" on.
         var x = Math.max(4, Math.round((el.offsetLeft - 4) / 75) * 75 + 4);
@@ -212,7 +211,7 @@
         x = Math.min(x, desktopEl.clientWidth - 75);
         y = Math.min(y, desktopEl.clientHeight - 70);
         iconPositions[it.id] = { x: x, y: y };
-        U.store.set('w98.iconpos', iconPositions);
+        U.store.setWarn('w98.iconpos', iconPositions, 'your icon positions');
         el.style.left = x + 'px'; el.style.top = y + 'px';
       });
     });
@@ -224,7 +223,7 @@
       text: 'Are you sure you want to send \'' + it.label + '\' to the Recycle Bin?'
     }).then(function (b) {
       if (b !== '&Yes') return;
-      try { FS.recycle(it.path); delete iconPositions[it.id]; U.store.set('w98.iconpos', iconPositions); }
+      try { FS.recycle(it.path); delete iconPositions[it.id]; U.store.setWarn('w98.iconpos', iconPositions, 'your icon positions'); }
       catch (err) { WM.msgbox({ title: 'Error Deleting File', icon: 'error', text: FS.errorText(err, it.path) }); }
     });
   }
@@ -244,7 +243,7 @@
         try {
           FS.rename(it.path, v + ext);
           iconPositions['file:' + (v + ext).toLowerCase()] = iconPositions[it.id];
-          U.store.set('w98.iconpos', iconPositions);
+          U.store.setWarn('w98.iconpos', iconPositions, 'your icon positions');
           return;
         } catch (err) { WM.msgbox({ title: 'Error Renaming File', icon: 'error', text: FS.errorText(err, it.path) }); }
       }
@@ -307,7 +306,7 @@
 
   function arrangeIcons() {
     iconPositions = {};
-    U.store.set('w98.iconpos', iconPositions);
+    U.store.setWarn('w98.iconpos', iconPositions, 'your icon positions');
     renderDesktop();
   }
 
@@ -347,8 +346,7 @@
           if (ir > l && il < l + w && ib > t && it < t + hh) ids.push(n.dataset.id);
         });
         select(ids);
-      });
-      document.addEventListener('pointerup', function up() { document.removeEventListener('pointerup', up); band.remove(); });
+      }, null, function () { band.remove(); });
     });
   }
 
@@ -522,7 +520,7 @@
     var tray = h('div', { id: 'tray' }, [aolTray, vol, clock]);
     clock.addEventListener('dblclick', function () { Shell.launch('control', 'datetime'); });
 
-    var taskbar = h('div', { id: 'taskbar' }, [
+    var taskbar = h('div', { id: 'taskbar', role: 'toolbar', 'aria-label': 'Taskbar' }, [
       startBtn, h('div', { className: 'tb-divider' }), h('div', { className: 'tb-grip' }), quick,
       h('div', { className: 'tb-divider' }), h('div', { className: 'tb-grip' }), taskButtons, tray
     ]);
@@ -530,8 +528,8 @@
       e.preventDefault();
       Menu.popup([
         { label: '&Cascade Windows', action: cascade },
-        { label: 'Tile Windows &Horizontally', action: cascade },
-        { label: 'Tile Windows V&ertically', action: cascade },
+        { label: 'Tile Windows &Horizontally', action: function () { WM.tile('h'); } },
+        { label: 'Tile Windows V&ertically', action: function () { WM.tile('v'); } },
         '-',
         { label: '&Minimize All Windows', action: showDesktop },
         '-',

@@ -1684,6 +1684,7 @@
       if (r.right - dr.left > dw) win.el.style.left = Math.max(0, dw - r.width) + 'px';
       if (r.bottom - dr.top > dh) win.el.style.top = Math.max(0, dh - r.height) + 'px';
       dirty = true;
+      if (typeof kick === 'function') kick();
     }
 
     // -------------------------------------------------------------------
@@ -1715,6 +1716,7 @@
       plunger.holding = false;
     }
     function togglePause() {
+      kick();
       if (autoPaused) { autoPaused = false; return; }
       userPaused = !userPaused;
       if (userPaused) releaseAll();
@@ -1723,6 +1725,7 @@
     function keyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return false;
       audioInit();
+      kick();
       if (e.key === 'F2') { newGame(); userPaused = false; return true; }
       if (e.key === 'F3') { togglePause(); return true; }
       var c = e.code || '';
@@ -1775,6 +1778,7 @@
     }
     canvas.addEventListener('pointerdown', function (e) {
       audioInit();
+      kick();
       if (e.button > 0) return;
       e.preventDefault();
       if (autoPaused) { autoPaused = false; return; }
@@ -1869,7 +1873,7 @@
     Menu.bar(win, [
       { label: '&Game', items: function () {
         return [
-          { label: '&New Game', shortcut: 'F2', action: function () { newGame(); userPaused = false; autoPaused = false; } },
+          { label: '&New Game', shortcut: 'F2', action: function () { newGame(); userPaused = false; autoPaused = false; kick(); } },
           { label: '&Launch Ball', action: function () {
             if (G.over) { newGame(); return; }
             if (ball.mode === 'plunger') { plunger.pull = 1; plunger.holding = true; plungeEnd(); }
@@ -1942,8 +1946,18 @@
         dirty = false;
       }
       musicTick();
+      // Nothing left to animate (paused, minimized, hidden or in the background): stop
+      // scheduling frames. kick() restarts the loop on input, focus or visibility.
+      if (!dirty && (!running() || !active)) { last = 0; acc = 0; return; }
       raf = requestAnimationFrame(frame);
     }
+    function kick() {
+      if (raf || win.closed) return;
+      last = 0;
+      raf = requestAnimationFrame(frame);
+    }
+    function onVisible() { if (!document.hidden) kick(); }
+    document.addEventListener('visibilitychange', onVisible);
 
     win.on('close', function () {
       if (raf) cancelAnimationFrame(raf);
@@ -1951,26 +1965,28 @@
       timers = [];
       document.removeEventListener('keyup', keyUp);
       window.removeEventListener('blur', onWinBlur);
+      document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('resize', fit);
       if (A.ctx) { try { A.ctx.close(); } catch (e) { /* ignore */ } A.ctx = null; }
     });
-    win.on('focus', function () { dirty = true; });
+    win.on('focus', function () { dirty = true; kick(); });
     win.on('blur', function () { releaseAll(); });
 
     // Test hook (used by automated checks; harmless otherwise).
     win.pinball = {
       get state() { return G; }, ball: ball, flippers: flippers, plunger: plunger, stats: stats, input: input,
       step: function (n) { for (var i = 0; i < (n || 1); i++) step(DT); },
-      press: function (side, on) { if (side === 'L') { input.L = on; setFlipper(0, on); } else { input.R = on; setFlipper(1, on); } },
-      plunge: function (on) { if (on) plungeStart(); else plungeEnd(); },
-      nudge: nudge, newGame: newGame, render: render
+      press: function (side, on) { kick(); if (side === 'L') { input.L = on; setFlipper(0, on); } else { input.R = on; setFlipper(1, on); } },
+      plunge: function (on) { kick(); if (on) plungeStart(); else plungeEnd(); },
+      nudge: function () { kick(); return nudge.apply(null, arguments); },
+      newGame: function () { kick(); return newGame.apply(null, arguments); }, render: render, kick: kick
     };
 
     newGame();
     fit();
     win.center();
     fit();
-    raf = requestAnimationFrame(frame);
+    kick();
     return win;
   }
 

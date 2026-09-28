@@ -428,6 +428,10 @@
         U.store.set('w98.welcomed', true);
         Shell.launch('welcome');
       }
+      if (FS.repaired) {
+        FS.repaired = false;
+        WM.msgbox({ title: 'ScanDisk', icon: 'warning', text: 'ScanDisk found errors on drive C: and repaired them.\n\nSome files may have been lost.' });
+      }
     }, 1200 + icons.length * 120);
   }
 
@@ -507,6 +511,11 @@
   window.Boot = {
     init: function () {
       machine = document.getElementById('machine');
+      // Unlock audio on the first interaction (there's no power button in ?desktop
+      // mode), and resume the context if the browser suspends it later. Cheap once running.
+      var unlock = function () { if (window.Sound) Sound.unlock(); };
+      document.addEventListener('pointerdown', unlock, true);
+      document.addEventListener('keydown', unlock, true);
       // ?desktop in the URL jumps straight in (handy for development).
       if (/[?&]desktop\b/.test(location.search)) {
         state = 'booting';
@@ -523,3 +532,5 @@
     get state() { return state; }
   };
 })();
+
+Boot.init();

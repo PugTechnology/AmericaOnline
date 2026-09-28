@@ -172,7 +172,7 @@
 
   // A window menu bar: spec = [{ label: '&File', items: [...] }, ...]
   Menu.bar = function (win, spec) {
-    var bar = h('div', { className: 'menubar' });
+    var bar = h('div', { className: 'menubar', role: 'menubar' });
     var tops = [];
     var state = { open: -1 };
 
@@ -191,7 +191,7 @@
     }
 
     spec.forEach(function (m, i) {
-      var t = h('div', { className: 'mb-item' });
+      var t = h('div', { className: 'mb-item', role: 'menuitem', 'aria-haspopup': 'true' });
       t.appendChild(U.label(m.label));
       t.addEventListener('pointerdown', function (e) {
         e.stopPropagation();
@@ -247,9 +247,10 @@
       minimized: false, maximized: false, closed: false, handlers: {}
     };
 
-    var el = h('div', { className: 'window' + (o.dialog ? ' dialog' : '') + (o.className ? ' ' + o.className : ''), role: o.dialog ? 'dialog' : 'application' });
+    var el = h('div', { className: 'window' + (o.dialog ? ' dialog' : '') + (o.className ? ' ' + o.className : ''), role: 'dialog' });
     var titleImg = o.dialog ? null : U.img(o.icon, 16);
-    var titleText = h('span', null, o.title);
+    var titleText = h('span', { id: 'wt-' + win.id }, o.title);
+    el.setAttribute('aria-labelledby', 'wt-' + win.id);
     var titleBar = h('div', { className: 'title-bar' }, [
       h('div', { className: 'title' }, [titleImg, titleText]),
       h('div', { className: 'title-controls' })
@@ -307,7 +308,9 @@
     win.setTitle = function (t) { win.title = t; titleText.textContent = t; emit(); };
     win.setIcon = function (i) { win.icon = i; if (titleImg) titleImg.src = U.icon(i, 16); emit(); };
     win.on = function (ev, fn) { (win.handlers[ev] = win.handlers[ev] || []).push(fn); };
-    win.fire = function (ev, arg) { (win.handlers[ev] || []).forEach(function (fn) { fn(arg); }); };
+    win.fire = function (ev, arg) { (win.handlers[ev] || []).slice().forEach(function (fn) {
+      try { fn(arg); } catch (e) { console.error(e); }
+    }); };
     win.focus = function () { WM.focus(win); };
     win.flash = function () {
       WM.focus(win);
@@ -517,7 +520,8 @@
     }, Promise.resolve(true));
   };
 
-  function drag(e, move, cursor) {
+  // done(ev, cancelled) is optional and runs once when the drag ends (or is cancelled).
+  function drag(e, move, cursor, done) {
     e.preventDefault();
     var id = e.pointerId;
     document.body.classList.add('dragging');
@@ -530,6 +534,7 @@
       document.removeEventListener('pointercancel', up);
       document.body.classList.remove('dragging');
       document.body.style.cursor = '';
+      if (done) done(ev, ev.type === 'pointercancel');
     }
     document.addEventListener('pointermove', mv);
     document.addEventListener('pointerup', up);
@@ -537,12 +542,37 @@
   }
   WM.drag = drag;
 
+  // Tile the open, resizable windows: 'h' stacks them in rows, 'v' sets them side by side.
+  // Too many for one line wrap into a grid, like Windows did.
+  WM.tile = function (dir) {
+    var wins = WM.windows.filter(function (w) {
+      return !w.minimized && !w.noTaskbar && !w.opts.dialog && w.opts.resizable !== false;
+    });
+    if (!wins.length) return;
+    var d = desktopRect(), n = wins.length;
+    var minW = 160, minH = 80;
+    var lines, per;
+    if (dir === 'v') { lines = Math.max(1, Math.min(n, Math.floor(d.w / minW))); per = Math.ceil(n / lines); }
+    else { lines = Math.max(1, Math.min(n, Math.floor(d.h / minH))); per = Math.ceil(n / lines); }
+    wins.forEach(function (w, i) {
+      var line = i % lines, cell = Math.floor(i / lines);
+      var cw, ch, x, y;
+      if (dir === 'v') { cw = d.w / lines; ch = d.h / per; x = line * cw; y = cell * ch; }
+      else { cw = d.w / per; ch = d.h / lines; x = cell * cw; y = line * ch; }
+      if (w.maximized) w.toggleMax();
+      Object.assign(w.el.style, { left: Math.round(x) + 'px', top: Math.round(y) + 'px', width: Math.round(cw) + 'px', height: Math.round(ch) + 'px' });
+      w.fire('resize');
+      WM.focus(w);
+    });
+  };
+
   function taskbarRect(win) {
     var b = document.querySelector('.task-btn[data-win="' + win.id + '"]');
     if (b) return b.getBoundingClientRect();
     return { left: 4, top: window.innerHeight - 26, width: 150, height: 22 };
   }
   function zoomAnim(from, to) {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var z = h('div', { className: 'zoom-rect' });
     Object.assign(z.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' });
     document.body.appendChild(z);

@@ -29,7 +29,7 @@
     // Guests leave no trace.
     copy.mail = Object.assign({}, copy.mail);
     Object.keys(copy.mail).forEach(function (k) { if (/^Guest/.test(k)) delete copy.mail[k]; });
-    U.store.set(STORE, copy);
+    U.store.setWarn(STORE, copy, 'your America Online mail and settings');
   }
 
   function mailbox() {

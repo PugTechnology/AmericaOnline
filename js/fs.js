@@ -110,27 +110,42 @@
   }
 
   function load() {
+    var raw = null;
     try {
-      var raw = localStorage.getItem(KEY);
-      if (raw) { root = JSON.parse(raw); return; }
-    } catch (e) { /* corrupt or unavailable storage: start fresh */ }
+      raw = localStorage.getItem(KEY);
+      if (raw) {
+        var t = JSON.parse(raw);
+        if (t && t.t === 'd' && t.c && typeof t.c === 'object') { root = t; lastGood = raw; return; }
+        throw new Error('BADDRIVE');
+      }
+    } catch (e) {
+      // Unparseable or wrong shape: keep the bad blob aside and start over.
+      if (raw) {
+        try { localStorage.setItem(KEY + '.corrupt', raw); } catch (e2) { /* full */ }
+        FS.repaired = true;
+      }
+    }
     root = seed();
+    try { lastGood = JSON.stringify(root); } catch (e) { lastGood = null; }
+    if (FS.repaired) persist();
   }
 
   function persist() {
     try {
-      localStorage.setItem(KEY, JSON.stringify(root));
+      var str = JSON.stringify(root);
+      localStorage.setItem(KEY, str);
+      lastGood = str;
       return true;
     } catch (e) {
       return false;
     }
   }
-  // Each mutation snapshots the tree first; if saving fails (storage full) the
-  // tree is rolled back so the screen never shows a change that wasn't saved.
-  var snapshot = null;
+  // If saving fails (storage full) the tree is rolled back to the last string that
+  // was saved, so the screen never shows a change that wasn't saved.
+  var lastGood = null;
   function changed(path) {
     var ok = persist();
-    if (!ok && snapshot) root = JSON.parse(snapshot);
+    if (!ok && lastGood) root = JSON.parse(lastGood);
     listeners.forEach(function (fn) { try { fn(path); } catch (e) { console.error(e); } });
     if (!ok) throw new Error('DISKFULL');
   }
@@ -340,13 +355,6 @@
     }
   };
 
-  ['write', 'mkdir', 'rename', 'remove', 'recycle', 'restore', 'emptyRecycleBin'].forEach(function (name) {
-    var fn = FS[name];
-    FS[name] = function () {
-      snapshot = JSON.stringify(root);
-      try { return fn.apply(FS, arguments); } finally { snapshot = null; }
-    };
-  });
   // When the disk is too full even to move a file to the Recycle Bin, delete it outright.
   var recycle = FS.recycle;
   FS.recycle = function (path) {
